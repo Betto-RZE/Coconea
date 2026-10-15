@@ -18,6 +18,11 @@
   --color-coffee-muted: #7A5C4D;
 }
 
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+}
+
 body {
   color: var(--color-coffee-text);
   background-color: var(--color-cream);

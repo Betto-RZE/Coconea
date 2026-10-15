@@ -224,7 +224,7 @@ export function AuthForm({ initialMode = 'login' }: AuthFormProps) {
   };
 
   return (
-    <div className="w-full max-w-sm space-y-5 rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm relative z-10">
+    <div className="w-full max-w-md space-y-5 rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm relative z-10">
       {/* Contenedor Superior: Logo y Switch en posición idéntica en ambas vistas */}
       <div className="space-y-4">
         {/* Logotipo con el emblema oficial de Coconea */}

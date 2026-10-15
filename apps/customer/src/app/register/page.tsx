@@ -21,7 +21,7 @@ export default function RegisterPage() {
       />
 
       {/* Barra superior con navegación de regreso */}
-      <div className="relative z-10 mx-auto w-full max-w-sm flex items-center justify-between">
+      <div className="relative z-10 mx-auto w-full max-w-md flex items-center justify-between">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-roasted hover:text-espresso transition bg-white/80 backdrop-blur-xs px-3 py-1.5 rounded-full border border-cream-border/70 shadow-2xs"
