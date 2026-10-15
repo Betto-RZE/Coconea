@@ -17,16 +17,6 @@ function LoginContent() {
 export default function LoginPage() {
   return (
     <div className="relative min-h-screen bg-cream flex flex-col justify-between py-6 px-4 sm:px-6 selection:bg-caramel/20 selection:text-espresso overflow-x-hidden">
-      {/* Fondo Papel Tapiz con iconos Coconea más grandes y alineados en diagonal */}
-      <div
-        className="fixed inset-0 pointer-events-none z-0 opacity-[0.18] bg-repeat"
-        style={{
-          backgroundImage: "url('/images/coconea-wallpaper-diagonal.png')",
-          backgroundSize: '150px 150px',
-          backgroundPosition: '0 0',
-        }}
-        aria-hidden="true"
-      />
 
       {/* Barra superior con navegación de regreso */}
       <div className="relative z-10 mx-auto w-full max-w-md flex items-center justify-between">

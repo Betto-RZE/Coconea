@@ -23,8 +23,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={plusJakartaSans.variable}>
-      <body className="min-h-screen bg-cream text-coffee font-sans antialiased selection:bg-caramel/20 selection:text-espresso">
-        <AuthProvider>{children}</AuthProvider>
+      <body className="min-h-screen bg-cream text-coffee font-sans antialiased selection:bg-caramel/20 selection:text-espresso relative">
+        {/* Fondo Papel Tapiz Global Coconea en diagonal */}
+        <div
+          className="fixed inset-0 pointer-events-none z-0 opacity-[0.18] bg-repeat"
+          style={{
+            backgroundImage: "url('/images/coconea-wallpaper-diagonal.png')",
+            backgroundSize: '150px 150px',
+            backgroundPosition: '0 0',
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Contenedor Principal de la Aplicación */}
+        <div className="relative z-10 min-h-screen flex flex-col">
+          <AuthProvider>{children}</AuthProvider>
+        </div>
       </body>
     </html>
   );
