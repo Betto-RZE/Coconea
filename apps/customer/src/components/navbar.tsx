@@ -127,7 +127,7 @@ export function Navbar() {
                 Iniciar Sesión
               </Link>
               <Link
-                href="/login"
+                href="/register"
                 id="btn-nav-register"
                 className="rounded-full bg-espresso px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-espresso-light active:bg-espresso-dark transition flex items-center gap-2"
               >
@@ -209,7 +209,7 @@ export function Navbar() {
                   Iniciar Sesión
                 </Link>
                 <Link
-                  href="/login"
+                  href="/register"
                   onClick={() => setMobileMenuOpen(false)}
                   className="w-full text-center rounded-full bg-espresso py-2.5 text-sm font-semibold text-white shadow-sm"
                 >

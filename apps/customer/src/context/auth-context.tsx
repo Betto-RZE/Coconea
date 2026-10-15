@@ -38,6 +38,7 @@ export interface AuthContextType {
     email: string;
     password: string;
     phone?: string;
+    dietaryPreference?: string;
   }) => Promise<AuthResponse>;
   loginAsDemo: (demoType: 'standard' | 'keto' | 'vegan') => void;
   logout: () => void;
@@ -196,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string;
     password: string;
     phone?: string;
+    dietaryPreference?: string;
   }): Promise<AuthResponse> => {
     setIsLoading(true);
 
@@ -235,7 +237,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password: trimmedPassword,
       phone: data.phone?.trim() || undefined,
       role: 'USER',
-      dietaryPreferences: ['Plan Saludable'],
+      dietaryPreferences: data.dietaryPreference
+        ? [data.dietaryPreference]
+        : ['Plan Equilibrado'],
       allergies: [],
     };
 
