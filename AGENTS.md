@@ -37,6 +37,7 @@ Antes de implementar una funcionalidad, consultar los documentos relevantes de `
 | `11-api.md` | Contratos REST |
 | `12-seguridad.md` | Controles de seguridad |
 | `13-stack-tecnologico.md` | Stack aprobado y modalidades de ejecución |
+| `14-sistema-de-diseno.md` | Sistema de diseño y UI (Cálida, Artesanal & Café / Crema) |
 
 **Orden de precedencia:** instrucciones explícitas actuales del propietario del proyecto; reglas de seguridad y negocio documentadas; contratos y arquitectura documentados; convenciones existentes del código; preferencias de implementación del agente. Si dos documentos se contradicen, **no resolver silenciosamente**: identificar la discrepancia, proponer la corrección mínima y solicitar confirmación si afecta comportamiento, datos, seguridad o alcance.
 
@@ -236,6 +237,23 @@ Una tarea se considera completada cuando:
 - Actualiza los contratos y documentos afectados.
 - Explica los pasos para reproducir o verificar el resultado.
 
+## 14. Sistema de Diseño y UI (Norma Obligatoria)
+
+Todas las interfaces (`customer`, `restaurant`, `delivery`, `admin`) deben implementar exclusivamente la **Versión CocoNea (Cálida, Artesanal & Café / Crema)**:
+
+- **Café Espresso Primario (`#3D2314`):** CTA principal, tabs activas y títulos de jerarquía superior.
+- **Café Tostado Secundario (`#6F4E37` / `#8B5A2B`):** Botones secundarios y acentos.
+- **Caramelo & Moca (`#D27D2D` / `#C49A6C`):** Badges, indicadores de entrega, chips de calorías y macros.
+- **Fondo Crema Suave (`#FFF8F5` / `#FAF5EE`):** Fondo principal del sistema para una atmósfera acogedora y orgánica.
+- **Superficies / Tarjetas (`#FFFFFF`):** Contenedores principales; contenedor crema bajo (`#FFF1EA`) para secciones y desgloses.
+- **Texto Primario (`#2E1A0F`):** Café profundo para máxima legibilidad; texto secundario `#7A5C4D`.
+- **Tipografía:** `Plus Jakarta Sans` o `Inter` (SemiBold 600 títulos, Medium 500 etiquetas, Regular 400 cuerpo).
+- **Bordes y Radio:** `border-radius: 16px` (`rounded-2xl`) para tarjetas medianas; `border-radius: 24px` o `9999px` (`rounded-full`) para chips, badges y botones de acción tipo píldora.
+- **Iconografía:** Lineal geométrica con trazo de `2px` (`lucide-react`), manteniendo relleno sólido únicamente en estados activos.
+
+Consultar [docs/14-sistema-de-diseno.md](file:///c:/Users/betto/Documents/Proyectos/Coconea/docs/14-sistema-de-diseno.md) y [.agents/rules/ui-design-system.md](file:///c:/Users/betto/Documents/Proyectos/Coconea/.agents/rules/ui-design-system.md).
+
 ---
 
 **Coconea — Planifica tu alimentación, confirma y recibe.**
+
