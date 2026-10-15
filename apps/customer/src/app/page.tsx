@@ -23,45 +23,46 @@ import {
   ChefHat,
   SlidersHorizontal,
 } from 'lucide-react';
+import { Navbar } from '@/components/navbar';
+import { useAuth } from '@/context/auth-context';
+import Link from 'next/link';
 
 export default function CustomerHome() {
+  const { user, isAuthenticated } = useAuth();
   const [selectedTab, setSelectedTab] = useState<'recommendation' | 'fixed'>('recommendation');
   const [proposalStatus, setProposalStatus] = useState<'pending' | 'confirmed' | 'rejected'>('pending');
 
   return (
     <div className="flex min-h-screen flex-col bg-cream text-coffee selection:bg-caramel/20 selection:text-espresso">
-      {/* Barra de Navegación */}
-      <header className="sticky top-0 z-50 border-b border-cream-border bg-white/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-espresso text-cream font-bold text-xl shadow-sm">
-              C
-            </span>
-            <div>
-              <span className="text-xl font-bold tracking-tight text-espresso">{PROJECT_NAME}</span>
-              <span className="hidden sm:inline-block ml-2 text-xs text-caramel bg-cream-container px-2.5 py-0.5 rounded-full font-medium border border-cream-border">
-                Consumidor
+      {/* Barra de Navegación con detección de sesión */}
+      <Navbar />
+
+      {/* Banner de Bienvenida Personalizado si hay sesión iniciada */}
+      {isAuthenticated && user && (
+        <div className="bg-cream-container/80 border-b border-cream-border px-4 py-2.5">
+          <div className="mx-auto max-w-6xl flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-2 text-espresso">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-caramel text-white text-[10px] font-bold">
+                ✓
+              </span>
+              <span>
+                Hola, <strong>{user.fullName}</strong>. Tu perfil está activo con:{' '}
+                <span className="text-caramel font-semibold">
+                  {user.dietaryPreferences?.join(', ') || 'Plan Estándar'}
+                </span>
+                {user.allergies && user.allergies.length > 0 && (
+                  <span className="text-coffee-muted ml-1">
+                    (Excluyendo: {user.allergies.join(', ')})
+                  </span>
+                )}
               </span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              id="btn-login"
-              className="rounded-full px-4 py-2 text-sm font-medium text-roasted hover:text-espresso hover:bg-cream-container transition"
-            >
-              Iniciar Sesión
-            </button>
-            <button
-              id="btn-register"
-              className="rounded-full bg-espresso px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-espresso-light active:bg-espresso-dark transition flex items-center gap-2"
-            >
-              <span>Comenzar Plan</span>
-              <ArrowRight className="h-4 w-4" strokeWidth={2} />
-            </button>
+            <a href="#demo-propuesta" className="font-semibold text-roasted hover:text-espresso underline decoration-caramel">
+              Revisar propuesta pendiente →
+            </a>
           </div>
         </div>
-      </header>
+      )}
 
       {/* Hero Section */}
       <main className="flex-1">

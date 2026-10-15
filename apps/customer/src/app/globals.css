@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Coconea Core Design System Tokens */
+
 :root {
   --color-espresso: #3D2314;
   --color-roasted: #6F4E37;
