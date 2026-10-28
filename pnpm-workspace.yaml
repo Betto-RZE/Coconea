@@ -4,3 +4,9 @@ packages:
 
 allowBuilds:
   '@nestjs/core': true
+  '@prisma/client': false
+  '@prisma/engines': false
+  esbuild: false
+  prisma: false
+  sqlite3: false
+  workerd: false
