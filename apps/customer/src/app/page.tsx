@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Flame,
   UtensilsCrossed,
   Info,
   Check,
@@ -26,16 +25,52 @@ import {
   ArrowRight,
   LogOut,
   Mail,
-  Lock,
 } from 'lucide-react';
 import { Navbar, CustomerTab } from '@/components/navbar';
 import { useAuth, DEMO_ACCOUNTS } from '@/context/auth-context';
+import CustomerDashboard from '@/app/components/CustomerDashboard';
 
 export default function CustomerHome() {
   const { user, isAuthenticated, logout, login } = useAuth();
   const [activeTab, setActiveTab] = useState<CustomerTab>('inicio');
   const [selectedMode, setSelectedMode] = useState<'recommendation' | 'fixed'>('recommendation');
   const [proposalStatus, setProposalStatus] = useState<'pending' | 'confirmed' | 'rejected'>('pending');
+  const [confirmedOrderId, setConfirmedOrderId] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  // Acción para confirmar la propuesta y persistirla en la API de SQLite (si está disponible)
+  const handleConfirmProposal = async () => {
+    setIsConfirming(true);
+    try {
+      const response = await fetch('http://localhost:4000/v1/pedidos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          estado: 'PROGRAMADO',
+          total: 185.0,
+          usuarioId: user?.id || 'usr_demo_standard_01',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setConfirmedOrderId(data.id || 'PED-2026-SQLITE');
+      } else {
+        setConfirmedOrderId('PED-LOCAL-2026');
+      }
+    } catch {
+      // Si la API SQLite está en reposo, continuar fluidamente en la demo
+      setConfirmedOrderId('PED-DEMO-2026');
+    } finally {
+      setIsConfirming(false);
+      setProposalStatus('confirmed');
+    }
+  };
+
+  const handleRejectProposal = () => {
+    setProposalStatus('rejected');
+    setConfirmedOrderId(null);
+  };
 
   return (
     <div className="min-h-screen flex flex-col justify-between py-4 px-3 sm:py-6 sm:px-4 pb-24 selection:bg-caramel/20 selection:text-espresso">
@@ -45,104 +80,157 @@ export default function CustomerHome() {
         <Navbar activeTab={activeTab} onSelectTab={setActiveTab} />
 
         {/* =========================================================================
-            VENTANA 1: INICIO & BIENVENIDA
+            VENTANA 1: INICIO & BIENVENIDA / DASHBOARD DE CLIENTE
            ========================================================================= */}
         {activeTab === 'inicio' && (
           <div className="space-y-4 animate-fadeIn">
-            {/* Saludo si hay sesión activa */}
-            {isAuthenticated && user && (
-              <div className="rounded-2xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-3.5 shadow-2xs flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 text-espresso truncate">
-                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-caramel text-white text-[10px] font-bold">
-                    ✓
-                  </span>
-                  <span className="truncate">
-                    Hola, <strong className="font-bold">{user.fullName}</strong>
-                  </span>
+            {isAuthenticated && user ? (
+              /* Dashboard de Usuario Autenticado con Estética Café y Crema */
+              <div className="space-y-4">
+                <CustomerDashboard
+                  nombre={user.fullName}
+                  rol={user.role}
+                  dietaryPreference={user.dietaryPreferences?.[0] || 'Plan Equilibrado'}
+                  proposalStatus={proposalStatus}
+                  orderId={confirmedOrderId}
+                  onConfirmProposal={handleConfirmProposal}
+                  onRejectProposal={handleRejectProposal}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                />
+
+                {/* Accesos rápidos a otras secciones */}
+                <div className="grid grid-cols-2 gap-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('modalidad')}
+                    className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 rounded-2xl bg-cream-container text-caramel border border-cream-border">
+                        <ChefHat className="h-5 w-5" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-coffee-muted" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-bold text-espresso">Modalidades</h2>
+                      <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
+                        Recomendación o selección fija.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('garantia')}
+                    className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 rounded-2xl bg-cream-container text-espresso border border-cream-border">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-coffee-muted" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-bold text-espresso">Garantía Ética</h2>
+                      <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
+                        Programar no es comprar ($0 MXN).
+                      </p>
+                    </div>
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('cuenta')}
-                  className="flex-shrink-0 text-[10px] font-bold text-roasted bg-cream-container border border-cream-border px-2.5 py-0.5 rounded-full hover:bg-cream-container/80 transition cursor-pointer"
-                >
-                  {user.dietaryPreferences?.[0] || 'Plan Equilibrado'} →
-                </button>
+              </div>
+            ) : (
+              /* Pantalla Hero para Invitados */
+              <div className="space-y-4">
+                <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm text-center space-y-4">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-cream-container px-3 py-1 text-[11px] font-semibold text-caramel border border-cream-border shadow-2xs">
+                    <Sparkles className="h-3.5 w-3.5 text-caramel" />
+                    <span>Sin sorpresas ni cobros automáticos</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h1 className="text-2xl font-black text-espresso tracking-tight leading-tight">
+                      Alimentación planificada,{' '}
+                      <span className="text-caramel">confirmada por ti</span>
+                    </h1>
+                    <p className="text-xs text-coffee-muted leading-relaxed font-normal">
+                      {PROJECT_MOTTO}
+                    </p>
+                  </div>
+
+                  {/* Acceso Rápido a la Propuesta del Día */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('propuesta')}
+                      className="w-full rounded-full bg-espresso py-3 px-5 text-xs font-bold text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark transition flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Calendar className="h-4 w-4 text-mocha-light" />
+                      <span>Ver Propuesta de Hoy</span>
+                      <span className="ml-1 px-2 py-0.5 rounded-full bg-caramel text-white text-[10px] font-bold">
+                        Activa
+                      </span>
+                    </button>
+                  </div>
+                </section>
+
+                {/* Accesos a las otras ventanas en forma de tarjetas interactivas */}
+                <div className="grid grid-cols-2 gap-3 text-left">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('modalidad')}
+                    className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 rounded-2xl bg-cream-container text-caramel border border-cream-border">
+                        <ChefHat className="h-5 w-5" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-coffee-muted" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-bold text-espresso">Modalidades</h2>
+                      <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
+                        Recomendación o selección fija.
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('garantia')}
+                    className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 rounded-2xl bg-cream-container text-espresso border border-cream-border">
+                        <ShieldCheck className="h-5 w-5" />
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-coffee-muted" />
+                    </div>
+                    <div>
+                      <h2 className="text-xs font-bold text-espresso">Garantía Ética</h2>
+                      <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
+                        Programar no es comprar ($0 MXN).
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Acceso directo a Demo */}
+                <div className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs text-center space-y-2">
+                  <p className="text-xs font-semibold text-coffee-muted">¿Deseas probar la experiencia completa?</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const demo = DEMO_ACCOUNTS.standard;
+                      login(demo.email, demo.password || 'Coconea2026!');
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-caramel hover:text-espresso underline cursor-pointer"
+                  >
+                    Entrar como Sofía Méndez (Demo Estándar) →
+                  </button>
+                </div>
               </div>
             )}
-
-            {/* Tarjeta Hero Principal */}
-            <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm text-center space-y-4">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-cream-container px-3 py-1 text-[11px] font-semibold text-caramel border border-cream-border shadow-2xs">
-                <Sparkles className="h-3.5 w-3.5 text-caramel" />
-                <span>Sin sorpresas ni cobros automáticos</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <h1 className="text-2xl font-black text-espresso tracking-tight leading-tight">
-                  Alimentación planificada,{' '}
-                  <span className="text-caramel">confirmada por ti</span>
-                </h1>
-                <p className="text-xs text-coffee-muted leading-relaxed font-normal">
-                  {PROJECT_MOTTO}
-                </p>
-              </div>
-
-              {/* Acceso Rápido a la Propuesta del Día */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('propuesta')}
-                  className="w-full rounded-full bg-espresso py-3 px-5 text-xs font-bold text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark transition flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Calendar className="h-4 w-4 text-mocha-light" />
-                  <span>Ver Propuesta de Hoy</span>
-                  <span className="ml-1 px-2 py-0.5 rounded-full bg-caramel text-white text-[10px] font-bold">
-                    Activa
-                  </span>
-                </button>
-              </div>
-            </section>
-
-            {/* Accesos a las otras ventanas en forma de tarjetas interactivas */}
-            <div className="grid grid-cols-2 gap-3 text-left">
-              <button
-                type="button"
-                onClick={() => setActiveTab('modalidad')}
-                className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-2xl bg-cream-container text-caramel border border-cream-border">
-                    <ChefHat className="h-5 w-5" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-coffee-muted" />
-                </div>
-                <div>
-                  <h2 className="text-xs font-bold text-espresso">Modalidades</h2>
-                  <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
-                    Recomendación o selección fija.
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('garantia')}
-                className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-2xl bg-cream-container text-espresso border border-cream-border">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-coffee-muted" />
-                </div>
-                <div>
-                  <h2 className="text-xs font-bold text-espresso">Garantía Ética</h2>
-                  <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
-                    Programar no es comprar ($0 MXN).
-                  </p>
-                </div>
-              </button>
-            </div>
           </div>
         )}
 
@@ -225,22 +313,31 @@ export default function CustomerHome() {
               </div>
             </div>
 
+            {/* Notificación de Pedido Persistido en SQLite si aplica */}
+            {confirmedOrderId && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                <span className="truncate">Código de Pedido: <strong>{confirmedOrderId}</strong></span>
+              </div>
+            )}
+
             {/* Acciones de la propuesta */}
             {proposalStatus === 'pending' && (
               <div className="pt-2 flex flex-col gap-2">
                 <button
                   id="btn-confirm-proposal"
                   type="button"
-                  onClick={() => setProposalStatus('confirmed')}
-                  className="w-full flex items-center justify-center gap-2 rounded-full bg-espresso py-3 text-xs font-bold text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark transition cursor-pointer"
+                  disabled={isConfirming}
+                  onClick={handleConfirmProposal}
+                  className="w-full flex items-center justify-center gap-2 rounded-full bg-espresso py-3 text-xs font-bold text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark transition disabled:opacity-60 cursor-pointer"
                 >
                   <CheckCircle2 className="h-4 w-4 text-mocha-light" />
-                  <span>Confirmar y Recibir</span>
+                  <span>{isConfirming ? 'Procesando comanda...' : 'Confirmar y Recibir'}</span>
                 </button>
                 <button
                   id="btn-reject-proposal"
                   type="button"
-                  onClick={() => setProposalStatus('rejected')}
+                  onClick={handleRejectProposal}
                   className="w-full flex items-center justify-center gap-1.5 rounded-full border border-cream-border py-2.5 text-xs font-semibold text-roasted hover:bg-cream-container transition cursor-pointer"
                 >
                   <XCircle className="h-4 w-4" />
@@ -260,7 +357,10 @@ export default function CustomerHome() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setProposalStatus('pending')}
+                  onClick={() => {
+                    setProposalStatus('pending');
+                    setConfirmedOrderId(null);
+                  }}
                   className="text-[11px] text-emerald-800 underline font-semibold hover:text-emerald-950 block mx-auto cursor-pointer"
                 >
                   Reiniciar simulación

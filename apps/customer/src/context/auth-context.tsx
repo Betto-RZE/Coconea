@@ -129,9 +129,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password?: string): Promise<AuthResponse> => {
     setIsLoading(true);
 
-    // Simulación de latencia de red (400ms)
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
     const normalizedEmail = email.trim().toLowerCase();
     const trimmedPassword = password?.trim() || '';
 
@@ -144,12 +141,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
+    // 1. Intentar validar contra la API SQLite (si está disponible en backend NestJS)
+    try {
+      const apiResponse = await fetch('http://localhost:4000/v1/usuarios', {
+        headers: { Accept: 'application/json' },
+      });
+      if (apiResponse.ok) {
+        const remoteUsers = await apiResponse.json();
+        if (Array.isArray(remoteUsers)) {
+          const apiUser = remoteUsers.find(
+            (u: any) =>
+              u.email?.toLowerCase() === normalizedEmail &&
+              u.passwordHash === trimmedPassword
+          );
+
+          if (apiUser) {
+            const sessionData: AuthUser = {
+              id: apiUser.id,
+              email: apiUser.email,
+              fullName: apiUser.nombre,
+              role: (apiUser.rol === 'CUSTOMER' ? 'USER' : apiUser.rol) as UserRole,
+              phone: apiUser.telefono || undefined,
+              dietaryPreferences: ['Plan Personalizado'],
+              allergies: [],
+            };
+
+            setUser(sessionData);
+            try {
+              localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(sessionData));
+            } catch {
+              // Fallback
+            }
+            setIsLoading(false);
+            return { success: true };
+          }
+        }
+      }
+    } catch {
+      // Si la API SQLite no está activa, continuar con repositorio local/demo
+    }
+
+    // 2. Verificación contra repositorio local y cuentas demo
+    await new Promise((resolve) => setTimeout(resolve, 300));
     const allUsers = getRegisteredUsers();
     const existingUser = allUsers.find(
       (u) => u.email.toLowerCase() === normalizedEmail
     );
 
-    // 1. Verificación de cuenta no existente
     if (!existingUser) {
       setIsLoading(false);
       return {
@@ -159,7 +197,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    // 2. Verificación de contraseña incorrecta
     const expectedPassword = existingUser.password || DEMO_DEFAULT_PASSWORD;
     if (trimmedPassword !== expectedPassword) {
       setIsLoading(false);
@@ -170,7 +207,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    // 3. Inicio exitoso
     const sessionData: AuthUser = {
       id: existingUser.id,
       email: existingUser.email,
@@ -201,8 +237,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }): Promise<AuthResponse> => {
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 450));
-
     const normalizedEmail = data.email.trim().toLowerCase();
     const trimmedFullName = data.fullName.trim();
     const trimmedPassword = data.password.trim();
@@ -230,8 +264,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
+    let generatedId = `usr_${Date.now().toString(36)}`;
+
+    // Intentar sincronizar con la API SQLite
+    try {
+      const apiResponse = await fetch('http://localhost:4000/v1/usuarios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: trimmedFullName,
+          email: normalizedEmail,
+          passwordHash: trimmedPassword,
+          telefono: data.phone?.trim() || '',
+          rol: 'CUSTOMER',
+        }),
+      });
+
+      if (apiResponse.ok) {
+        const apiData = await apiResponse.json();
+        if (apiData?.id) {
+          generatedId = apiData.id;
+        }
+      }
+    } catch {
+      // Si la API SQLite está offline, el registro continúa con persistencia local
+    }
+
     const newUser: AuthUser = {
-      id: `usr_${Date.now().toString(36)}`,
+      id: generatedId,
       email: normalizedEmail,
       fullName: trimmedFullName,
       password: trimmedPassword,
