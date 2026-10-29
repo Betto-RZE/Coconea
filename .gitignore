@@ -14,6 +14,7 @@ build/
 out/
 .next/
 .next-dev/
+.dev-dist/
 .turbo/
 
 # Environment variables

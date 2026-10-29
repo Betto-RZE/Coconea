@@ -7,18 +7,21 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "echo \"@coconea/restaurant: linting...\"",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit --incremental false"
   },
   "dependencies": {
     "@coconea/shared": "workspace:*",
     "@coconea/types": "workspace:*",
     "@coconea/validation": "workspace:*",
+    "@hookform/resolvers": "5.2.2",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
     "next": "^15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^3.0.2"
+    "react-hook-form": "7.66.0",
+    "tailwind-merge": "^3.0.2",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20.17.19",

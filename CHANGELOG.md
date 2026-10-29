@@ -9,6 +9,10 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
 ### Changed
 
+- Catálogo compartido mediante API NestJS, PostgreSQL y Drizzle; panel de restaurantes con Better Auth, cuentas locales por establecimiento, creación y edición de productos, disponibilidad y actualización automática en consumidor. Validación por rol y propiedad, control de versiones, auditoría y pruebas de integración con base aislada. Se conserva el modo demo independiente.
+
+- Menú desplegable superior del consumidor retirado; la navegación permanece en la barra inferior. Platillos y detalles con imágenes locales ilustrativas por categoría.
+
 - Catálogo ampliado con Domino's y Green Grass: cinco restaurantes, 60 opciones de menú y filtros de hamburguesas, pizza, ensaladas, pollo y sándwiches.
 
 - Menús de demostración ampliados a 12 opciones por restaurante, con filtros para especialidades, complementos, postres y bebidas; los precios siguen siendo simulados y los datos nutricionales no están verificados.

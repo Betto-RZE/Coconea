@@ -2,14 +2,33 @@ name: CI - Integración Continua
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   lint-and-typecheck:
-    name: Lint & Typecheck
+    name: Types & Catalog integration
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: coconea_ci
+          POSTGRES_PASSWORD: coconea_ci
+          POSTGRES_DB: coconea_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U coconea_ci -d coconea_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://coconea_ci:coconea_ci@localhost:5432/coconea_ci
+      NODE_ENV: test
 
     steps:
       - name: Checkout del código
@@ -21,8 +40,8 @@ jobs:
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: 'pnpm'
+          node-version: 24
+          cache: "pnpm"
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
@@ -31,3 +50,9 @@ jobs:
         run: |
           pnpm check-types
           pnpm lint
+
+      - name: Preparar secreto efímero de prueba
+        run: node -e "require('fs').appendFileSync(process.env.GITHUB_ENV, 'BETTER_AUTH_SECRET=' + require('crypto').randomBytes(48).toString('base64url') + '\n')"
+
+      - name: Probar sesiones, permisos y catálogo con PostgreSQL aislado
+        run: pnpm --filter @coconea/api test

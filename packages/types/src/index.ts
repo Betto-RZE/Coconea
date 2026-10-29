@@ -3,46 +3,43 @@
  * Dominio, contratos y modelos compartidos del proyecto Coconea
  */
 
+export type {
+  CatalogCategory,
+  ProductCategory,
+  CatalogProduct,
+  CatalogRestaurant,
+  ProductInput,
+  IngredientDeclaration,
+} from "./catalog";
+
 // Roles y Actores
-export type UserRole = 'USER' | 'RESTAURANT' | 'DELIVERY' | 'ADMIN';
-export type ActorRole = UserRole | 'SYSTEM';
+export type UserRole = "USER" | "RESTAURANT" | "DELIVERY" | "ADMIN";
+export type ActorRole = UserRole | "SYSTEM";
 
 // Modalidades de Planificación Recurrente
-export type PlanMode = 'FIXED' | 'RECOMMENDATION';
+export type PlanMode = "FIXED" | "RECOMMENDATION";
 
 // Estados de Propuestas
 export type ProposalStatus =
-  | 'PENDING_CONFIRMATION'
-  | 'CONFIRMED'
-  | 'REJECTED'
-  | 'EXPIRED'
-  | 'CANCELLED';
+  "PENDING_CONFIRMATION" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "CANCELLED";
 
 // Estados del Pedido
 export type OrderStatus =
-  | 'PENDING_PAYMENT'
-  | 'CONFIRMED'
-  | 'IN_PREPARATION'
-  | 'READY_FOR_PICKUP'
-  | 'OUT_FOR_DELIVERY'
-  | 'DELIVERED'
-  | 'CANCELLED';
+  | "PENDING_PAYMENT"
+  | "CONFIRMED"
+  | "IN_PREPARATION"
+  | "READY_FOR_PICKUP"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "CANCELLED";
 
 // Estados del Pago (Simulado en MVP)
 export type PaymentStatus =
-  | 'PENDING'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'UNCERTAIN'
-  | 'REFUNDED';
+  "PENDING" | "APPROVED" | "REJECTED" | "UNCERTAIN" | "REFUNDED";
 
 // Estados de la Entrega
 export type DeliveryStatus =
-  | 'PENDING_ASSIGNMENT'
-  | 'ASSIGNED'
-  | 'PICKED_UP'
-  | 'DELIVERED'
-  | 'FAILED';
+  "PENDING_ASSIGNMENT" | "ASSIGNED" | "PICKED_UP" | "DELIVERED" | "FAILED";
 
 // Información Nutricional
 export interface NutritionalInfo {

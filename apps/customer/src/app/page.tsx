@@ -6,6 +6,8 @@ import {
   PROJECT_NAME,
   PROJECT_MOTTO,
   formatCurrencyMXN,
+  catalogRequest,
+  catalogToPresentation,
 } from "@coconea/shared";
 import {
   Calendar,
@@ -46,356 +48,16 @@ import { useAuth, DEMO_ACCOUNTS } from "@/context/auth-context";
 // MODELOS DE DATOS: RESTAURANTES ALIADOS Y SUS RESPECTIVOS MENÚS
 // =============================================================================
 
-interface DishItem {
-  id: string;
-  restaurantId: string;
-  name: string;
-  category:
-    | "fuertes"
-    | "bowls"
-    | "keto"
-    | "vegano"
-    | "bebidas"
-    | "complementos"
-    | "postres";
-  categoryLabel: string;
-  price: number;
-  calories: number | null;
-  protein: number | null;
-  carbs: number | null;
-  fats: number | null;
-  allergens: string[];
-  safeBadges: string[];
-  ingredients: string[];
-  description: string;
-  highlightTag?: string;
-  isBeverage?: boolean;
-}
+import {
+  DEMO_RESTAURANTS,
+  type DemoMenuItem as DishItem,
+  type DemoRestaurant as Restaurant,
+} from "@coconea/shared";
 
-interface Restaurant {
-  id: string;
-  name: string;
-  tagline: string;
-  specialty: string;
-  image: string;
-  imageAlt: string;
-  avatarEmoji: string;
-  avatarBg: string;
-  cuisineCategory: "all" | "burgers" | "chicken" | "subs" | "pizza" | "salads";
-  cuisineLabel: string;
-  rating: number;
-  reviewCount: number;
-  distance: string;
-  prepTime: string;
-  address: string;
-  verifiedBadge: string;
-  badges: string[];
-  menuCategories: { id: string; label: string }[];
-  menu: DishItem[];
-}
+import type { CatalogRestaurant } from "@coconea/types";
 
-// -----------------------------------------------------------------------------
-// CATÁLOGO DE RESTAURANTES Y MENÚS DETALLADOS
-// -----------------------------------------------------------------------------
-
-// Reference brands and imagery; all operational and menu data below are fictional.
-function demoDish(
-  id: string,
-  restaurantId: string,
-  name: string,
-  price: number,
-  category: DishItem["category"] = "fuertes",
-): DishItem {
-  return {
-    id,
-    restaurantId,
-    name,
-    price,
-    category,
-    categoryLabel:
-      category === "bebidas"
-        ? "Bebidas"
-        : category === "complementos"
-          ? "Complementos"
-          : category === "postres"
-            ? "Postres"
-            : "Especialidades",
-    calories: null,
-    protein: null,
-    carbs: null,
-    fats: null,
-    allergens: ["Información de alérgenos no verificada"],
-    safeBadges: [],
-    ingredients: [
-      "Consulta la información oficial de ingredientes y alérgenos antes de comprar.",
-    ],
-    description:
-      "Producto de referencia para explorar la demo. Precio y composición no verificados.",
-    isBeverage: category === "bebidas",
-  };
-}
-
-const RESTAURANTS_CATALOG: Restaurant[] = [
-  {
-    id: "rest-raices",
-    name: "McDonald's",
-    tagline: "Hamburguesas, papas y tus clásicos favoritos.",
-    specialty: "Hamburguesas y complementos",
-    image: "/images/restaurants/mcdonalds.jpg",
-    imageAlt: "Hamburguesa de referencia de McDonald's",
-    avatarEmoji: "🍔",
-    avatarBg: "bg-cream-container text-espresso border-cream-border",
-    cuisineCategory: "burgers",
-    cuisineLabel: "Hamburguesas",
-    rating: 4.8,
-    reviewCount: 120,
-    distance: "1.4 km",
-    prepTime: "25–35 min",
-    address: "Sucursal de demostración",
-    verifiedBadge: "Marca de referencia · Demo",
-    badges: [],
-    menuCategories: [
-      { id: "all", label: "Todo el menú" },
-      { id: "fuertes", label: "Hamburguesas" },
-      { id: "complementos", label: "Complementos" },
-      { id: "postres", label: "Postres" },
-      { id: "bebidas", label: "Bebidas" },
-    ],
-    menu: [
-      demoDish("dish-r1", "rest-raices", "Big Mac", 99),
-      demoDish("dish-r2", "rest-raices", "Cuarto de Libra con Queso", 109),
-      demoDish("dish-r3", "rest-raices", "Hamburguesa con Queso", 59),
-      demoDish("dish-r4", "rest-raices", "McPollo", 89),
-      demoDish("dish-r5", "rest-raices", "McNuggets de 10 piezas", 99),
-      demoDish("dish-r6", "rest-raices", "Doble Hamburguesa con Queso", 79),
-      demoDish("side-r1", "rest-raices", "Papas medianas", 45, "complementos"),
-      demoDish("side-r2", "rest-raices", "Papas grandes", 55, "complementos"),
-      demoDish(
-        "dessert-r1",
-        "rest-raices",
-        "Sundae de chocolate",
-        39,
-        "postres",
-      ),
-      demoDish("bev-r1", "rest-raices", "Refresco", 35, "bebidas"),
-      demoDish("bev-r2", "rest-raices", "Agua embotellada", 29, "bebidas"),
-      demoDish("bev-r3", "rest-raices", "Café americano", 35, "bebidas"),
-    ],
-  },
-  {
-    id: "rest-botanica",
-    name: "Subway",
-    tagline: "Subs para combinar a tu gusto, con vegetales y aderezos.",
-    specialty: "Subs y sándwiches",
-    image: "/images/restaurants/subway.png",
-    imageAlt: "Sándwiches de referencia de Subway",
-    avatarEmoji: "🥖",
-    avatarBg: "bg-cream-container text-espresso border-cream-border",
-    cuisineCategory: "subs",
-    cuisineLabel: "Sándwiches",
-    rating: 4.7,
-    reviewCount: 95,
-    distance: "2.1 km",
-    prepTime: "20–30 min",
-    address: "Sucursal de demostración",
-    verifiedBadge: "Marca de referencia · Demo",
-    badges: [],
-    menuCategories: [
-      { id: "all", label: "Todo el menú" },
-      { id: "fuertes", label: "Subs" },
-      { id: "complementos", label: "Complementos" },
-      { id: "postres", label: "Postres" },
-      { id: "bebidas", label: "Bebidas" },
-    ],
-    menu: [
-      demoDish("dish-b1", "rest-botanica", "Pollo Estilo Teriyaki", 119),
-      demoDish("dish-b2", "rest-botanica", "Italiano B.M.T.", 109),
-      demoDish("dish-b3", "rest-botanica", "Deleite Vegetariano", 89),
-      demoDish("dish-b4", "rest-botanica", "Sub de Atún", 109),
-      demoDish("dish-b5", "rest-botanica", "Sub de Jamón de Pavo", 99),
-      demoDish("dish-b6", "rest-botanica", "Pollo Parmesano", 119),
-      demoDish("side-b1", "rest-botanica", "Papas", 35, "complementos"),
-      demoDish(
-        "side-b2",
-        "rest-botanica",
-        "Boneless Bites",
-        59,
-        "complementos",
-      ),
-      demoDish(
-        "dessert-b1",
-        "rest-botanica",
-        "Galleta con chispas de chocolate",
-        25,
-        "postres",
-      ),
-      demoDish("bev-b1", "rest-botanica", "Agua embotellada", 29, "bebidas"),
-      demoDish(
-        "bev-b2",
-        "rest-botanica",
-        "Bebida de dispensador",
-        35,
-        "bebidas",
-      ),
-      demoDish(
-        "bev-b3",
-        "rest-botanica",
-        "Té negro embotellado",
-        39,
-        "bebidas",
-      ),
-    ],
-  },
-  {
-    id: "rest-pacifico",
-    name: "KFC",
-    tagline: "Pollo crujiente y opciones para compartir.",
-    specialty: "Pollo y complementos",
-    image: "/images/restaurants/kfc.png",
-    imageAlt: "Bucket de pollo de referencia de KFC",
-    avatarEmoji: "🍗",
-    avatarBg: "bg-cream-container text-espresso border-cream-border",
-    cuisineCategory: "chicken",
-    cuisineLabel: "Pollo",
-    rating: 4.6,
-    reviewCount: 110,
-    distance: "1.8 km",
-    prepTime: "30–40 min",
-    address: "Sucursal de demostración",
-    verifiedBadge: "Marca de referencia · Demo",
-    badges: [],
-    menuCategories: [
-      { id: "all", label: "Todo el menú" },
-      { id: "fuertes", label: "Pollo y combos" },
-      { id: "complementos", label: "Complementos" },
-      { id: "postres", label: "Postres" },
-      { id: "bebidas", label: "Bebidas" },
-    ],
-    menu: [
-      demoDish("dish-p1", "rest-pacifico", "Bucket 12 piezas", 499),
-      demoDish("dish-p2", "rest-pacifico", "Megabox Big Krunch", 199),
-      demoDish("dish-p3", "rest-pacifico", "Pieza de pollo", 49),
-      demoDish("dish-p4", "rest-pacifico", "Megabox La Secreta Burger", 219),
-      demoDish("dish-p5", "rest-pacifico", "Megabox Ke-Tiras", 169),
-      demoDish("dish-p6", "rest-pacifico", "Bucket de 8 piezas", 359),
-      demoDish(
-        "side-p1",
-        "rest-pacifico",
-        "Puré individual",
-        45,
-        "complementos",
-      ),
-      demoDish(
-        "side-p2",
-        "rest-pacifico",
-        "Bisquet original",
-        25,
-        "complementos",
-      ),
-      demoDish("dessert-p1", "rest-pacifico", "Pay de manzana", 39, "postres"),
-      demoDish("bev-p1", "rest-pacifico", "Refresco de lata", 35, "bebidas"),
-      demoDish("bev-p2", "rest-pacifico", "Agua embotellada", 29, "bebidas"),
-      demoDish("bev-p3", "rest-pacifico", "Refresco familiar", 65, "bebidas"),
-    ],
-  },
-  {
-    id: "rest-dominos",
-    name: "Domino's",
-    tagline: "Pizzas clásicas y especialidades para compartir.",
-    specialty: "Pizzas y complementos",
-    image: "/images/restaurants/dominos.svg",
-    imageAlt: "Logotipo de referencia de Domino's",
-    avatarEmoji: "🍕",
-    avatarBg: "bg-cream-container text-espresso border-cream-border",
-    cuisineCategory: "pizza",
-    cuisineLabel: "Pizza",
-    rating: 4.7,
-    reviewCount: 130,
-    distance: "2.3 km",
-    prepTime: "30–45 min",
-    address: "Sucursal de demostración",
-    verifiedBadge: "Marca de referencia · Demo",
-    badges: [],
-    menuCategories: [
-      { id: "all", label: "Todo el menú" },
-      { id: "fuertes", label: "Pizzas" },
-      { id: "complementos", label: "Complementos" },
-      { id: "postres", label: "Postres" },
-      { id: "bebidas", label: "Bebidas" },
-    ],
-    menu: [
-      demoDish("dish-d1", "rest-dominos", "Pizza de pepperoni", 199),
-      demoDish("dish-d2", "rest-dominos", "Pizza hawaiana", 219),
-      demoDish("dish-d3", "rest-dominos", "Pizza mexicana", 239),
-      demoDish("dish-d4", "rest-dominos", "Pizza de cuatro quesos", 239),
-      demoDish("dish-d5", "rest-dominos", "Pizza vegetariana", 219),
-      demoDish("dish-d6", "rest-dominos", "Pizza de carnes", 249),
-      demoDish("side-d1", "rest-dominos", "Papotas", 69, "complementos"),
-      demoDish("side-d2", "rest-dominos", "Pan de ajo", 59, "complementos"),
-      demoDish("dessert-d1", "rest-dominos", "Baitz de canela", 69, "postres"),
-      demoDish("bev-d1", "rest-dominos", "Refresco individual", 35, "bebidas"),
-      demoDish("bev-d2", "rest-dominos", "Refresco familiar", 65, "bebidas"),
-      demoDish("bev-d3", "rest-dominos", "Agua embotellada", 29, "bebidas"),
-    ],
-  },
-  {
-    id: "rest-greengrass",
-    name: "Green Grass",
-    tagline: "Ensaladas, bowls y chapatas para variar tu semana.",
-    specialty: "Ensaladas y chapatas",
-    image: "/images/restaurants/greengrass.jpg",
-    imageAlt: "Ensalada de referencia de Green Grass",
-    avatarEmoji: "🥗",
-    avatarBg: "bg-cream-container text-espresso border-cream-border",
-    cuisineCategory: "salads",
-    cuisineLabel: "Ensaladas",
-    rating: 4.8,
-    reviewCount: 85,
-    distance: "1.9 km",
-    prepTime: "20–35 min",
-    address: "Sucursal de demostración",
-    verifiedBadge: "Marca de referencia · Demo",
-    badges: [],
-    menuCategories: [
-      { id: "all", label: "Todo el menú" },
-      { id: "fuertes", label: "Ensaladas" },
-      { id: "complementos", label: "Chapatas" },
-      { id: "bebidas", label: "Bebidas" },
-    ],
-    menu: [
-      demoDish("dish-g1", "rest-greengrass", "Cesar & Bacon", 159),
-      demoDish("dish-g2", "rest-greengrass", "Parmesan Grilled Chicken", 169),
-      demoDish("dish-g3", "rest-greengrass", "Chicken Club Ranch", 169),
-      demoDish("dish-g4", "rest-greengrass", "Asian Tuna Rice", 179),
-      demoDish("dish-g5", "rest-greengrass", "Balsamic Red Apple", 159),
-      demoDish("dish-g6", "rest-greengrass", "Guacamole Chic", 169),
-      demoDish(
-        "side-g1",
-        "rest-greengrass",
-        "Chapata Rustic Pesto",
-        139,
-        "complementos",
-      ),
-      demoDish(
-        "side-g2",
-        "rest-greengrass",
-        "Chapata Italian Chicken Bacon",
-        149,
-        "complementos",
-      ),
-      demoDish(
-        "side-g3",
-        "rest-greengrass",
-        "Green Club Sándwich",
-        149,
-        "complementos",
-      ),
-      demoDish("bev-g1", "rest-greengrass", "Agua embotellada", 29, "bebidas"),
-      demoDish("bev-g2", "rest-greengrass", "Agua de limón", 39, "bebidas"),
-      demoDish("bev-g3", "rest-greengrass", "Té frío", 39, "bebidas"),
-    ],
-  },
-];
+const LOCAL_CATALOG = process.env.NEXT_PUBLIC_APP_MODE === "local";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 
 const CUISINE_FILTERS = [
   { id: "all", label: "Todos", icon: Store },
@@ -459,6 +121,10 @@ const INITIAL_WEEKLY_PLAN: DayPlan[] = [
 
 export default function CustomerHome() {
   const { user, isAuthenticated, logout, login } = useAuth();
+  const [restaurants, setRestaurants] =
+    useState<Restaurant[]>(DEMO_RESTAURANTS);
+  const [catalogLoaded, setCatalogLoaded] = useState(!LOCAL_CATALOG);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<CustomerTab>("inicio");
 
   // Estado del restaurante seleccionado en el directorio (null = lista de restaurantes, string = ver menú de ese restaurante)
@@ -514,13 +180,68 @@ export default function CustomerHome() {
     setTimeout(() => setToastMessage(null), 3200);
   };
 
+  useEffect(() => {
+    if (!LOCAL_CATALOG) return;
+    let disposed = false;
+    let busy = false;
+    let lastCatalog = "";
+    const load = async () => {
+      if (busy || disposed) return;
+      busy = true;
+      try {
+        const data = await catalogRequest<CatalogRestaurant[]>(
+          API_URL,
+          "/restaurants",
+          { credentials: "omit" },
+        );
+        if (
+          !data.length ||
+          data.some((restaurant) => !restaurant.products.length)
+        )
+          throw new Error(
+            "El catálogo local está vacío. Carga los datos iniciales.",
+          );
+        const serialized = JSON.stringify(data);
+        if (!disposed) {
+          if (serialized !== lastCatalog) {
+            setRestaurants(catalogToPresentation(data));
+            setProposalStatus("pending");
+            setSelectedDishModal(null);
+            setRestaurantSwitchPending(null);
+            lastCatalog = serialized;
+          }
+          setCatalogLoaded(true);
+          setCatalogError(null);
+        }
+      } catch (error) {
+        if (!disposed)
+          setCatalogError(
+            error instanceof Error
+              ? error.message
+              : "No se pudo actualizar el catálogo.",
+          );
+      } finally {
+        busy = false;
+      }
+    };
+    void load();
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void load();
+    }, 5000);
+    window.addEventListener("focus", load);
+    return () => {
+      disposed = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", load);
+    };
+  }, []);
+
   // Restaurante activo en la propuesta
   const currentProposalRestaurant = useMemo(() => {
     return (
-      RESTAURANTS_CATALOG.find((r) => r.id === activeRestaurantId) ||
-      RESTAURANTS_CATALOG[0]
+      restaurants.find((r) => r.id === activeRestaurantId) || restaurants[0]
     );
-  }, [activeRestaurantId]);
+  }, [activeRestaurantId, restaurants]);
 
   // Platillo activo en la propuesta
   const currentProposalDish = useMemo(() => {
@@ -552,14 +273,12 @@ export default function CustomerHome() {
   // Restaurante que se está visualizando en el directorio/drilldown
   const viewingRestaurant = useMemo(() => {
     if (!selectedRestaurantId) return null;
-    return (
-      RESTAURANTS_CATALOG.find((r) => r.id === selectedRestaurantId) || null
-    );
-  }, [selectedRestaurantId]);
+    return restaurants.find((r) => r.id === selectedRestaurantId) || null;
+  }, [selectedRestaurantId, restaurants]);
 
   // Lista filtrada de restaurantes para el directorio
   const filteredRestaurants = useMemo(() => {
-    return RESTAURANTS_CATALOG.filter((rest) => {
+    return restaurants.filter((rest) => {
       const matchesCategory =
         restaurantFilter === "all" || rest.cuisineCategory === restaurantFilter;
       const q = restaurantSearchQuery.toLowerCase();
@@ -571,7 +290,7 @@ export default function CustomerHome() {
         rest.menu.some((d) => d.name.toLowerCase().includes(q));
       return matchesCategory && matchesSearch;
     });
-  }, [restaurantFilter, restaurantSearchQuery, selectedRestaurantId]);
+  }, [restaurantFilter, restaurantSearchQuery, restaurants]);
 
   useEffect(() => {
     setCarouselIndex(0);
@@ -600,6 +319,10 @@ export default function CustomerHome() {
     restaurant: Restaurant,
     dish: DishItem,
   ) => {
+    if (dish.available === false || (LOCAL_CATALOG && catalogError)) {
+      showToast("Este producto no está disponible para seleccionar.");
+      return;
+    }
     // Si el platillo pertenece a un restaurante diferente del actual en la propuesta
     if (activeRestaurantId !== restaurant.id && activeDishId) {
       setRestaurantSwitchPending({
@@ -645,12 +368,38 @@ export default function CustomerHome() {
     setActiveTab("propuesta");
   };
 
+  if (LOCAL_CATALOG && !catalogLoaded)
+    return (
+      <main className="mx-auto max-w-lg p-6 space-y-4 text-espresso">
+        <h1 className="text-xl font-semibold">Coconea</h1>
+        <p role="status">{catalogError || "Cargando el catálogo local…"}</p>
+        {catalogError && (
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="rounded-full bg-espresso px-5 py-3 text-white"
+          >
+            Reintentar
+          </button>
+        )}
+      </main>
+    );
+
   return (
     <div className="customer-shell min-h-screen flex flex-col justify-between px-4 pt-4 sm:px-6 sm:pt-6 selection:bg-caramel/20 selection:text-espresso">
       {/* Contenedor Principal Centrado Estilo Mobile (max-w-md / 100% en pantallas móviles) */}
       <main className="w-full max-w-lg mx-auto space-y-5">
         {/* Barra Superior de la Aplicación */}
         <Navbar activeTab={activeTab} onSelectTab={setActiveTab} />
+        {LOCAL_CATALOG && (
+          <p
+            role="status"
+            className="rounded-2xl border border-cream-border bg-white p-3 text-sm text-roasted"
+          >
+            {catalogError ||
+              "Catálogo local conectado. Las cuentas de consumidor y los pedidos de esta vista siguen siendo demostraciones."}
+          </p>
+        )}
 
         {/* Notificación Toast Flotante */}
         {toastMessage && (
@@ -1015,6 +764,25 @@ export default function CustomerHome() {
                             : "border-cream-border/90"
                         }`}
                       >
+                        <figure className="relative overflow-hidden rounded-2xl border border-cream-border bg-cream-soft">
+                          <img
+                            src={dish.image}
+                            alt={dish.imageAlt}
+                            width={640}
+                            height={360}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-40 w-full object-contain sm:h-44"
+                          />
+                          <figcaption className="absolute bottom-2 left-2 rounded-full bg-white/95 px-2.5 py-1 text-xs text-roasted">
+                            Imagen de referencia
+                          </figcaption>
+                        </figure>
+                        {dish.available === false && (
+                          <p className="text-sm font-semibold text-roasted">
+                            No disponible
+                          </p>
+                        )}
                         {/* Encabezado del Platillo */}
                         <div className="flex items-start justify-between gap-2">
                           <div className="space-y-0.5 min-w-0">
@@ -1105,6 +873,9 @@ export default function CustomerHome() {
                           ) : (
                             <button
                               type="button"
+                              disabled={
+                                dish.available === false || !!catalogError
+                              }
                               onClick={() =>
                                 handleSelectDishForProposal(
                                   viewingRestaurant,
@@ -1425,6 +1196,12 @@ export default function CustomerHome() {
                   id="btn-confirm-proposal"
                   type="button"
                   onClick={() => {
+                    if (LOCAL_CATALOG) {
+                      showToast(
+                        "Los pedidos reales todavía no están habilitados. El catálogo sí está conectado.",
+                      );
+                      return;
+                    }
                     setProposalStatus("confirmed");
                     showToast(
                       `¡Comida confirmada con ${currentProposalRestaurant.name}!`,
@@ -1547,7 +1324,7 @@ export default function CustomerHome() {
                   </span>
                   <span className="text-sm font-bold">
                     {(() => {
-                      const r = RESTAURANTS_CATALOG.find(
+                      const r = restaurants.find(
                         (rest) => rest.id === item.restaurantId,
                       );
                       const d = r?.menu.find((dish) => dish.id === item.dishId);
@@ -1564,9 +1341,8 @@ export default function CustomerHome() {
                 weeklyPlan.find((d) => d.day === selectedPlanDay) ||
                 weeklyPlan[0];
               const planRestaurant =
-                RESTAURANTS_CATALOG.find(
-                  (r) => r.id === currentDayPlan.restaurantId,
-                ) || RESTAURANTS_CATALOG[0];
+                restaurants.find((r) => r.id === currentDayPlan.restaurantId) ||
+                restaurants[0];
               const planDish =
                 planRestaurant.menu.find(
                   (d) => d.id === currentDayPlan.dishId,
@@ -1622,7 +1398,7 @@ export default function CustomerHome() {
                         Selecciona Restaurante para el {currentDayPlan.fullDay}:
                       </span>
                       <div className="grid grid-cols-2 gap-1.5">
-                        {RESTAURANTS_CATALOG.map((rest) => (
+                        {restaurants.map((rest) => (
                           <button
                             key={rest.id}
                             type="button"
@@ -2012,6 +1788,18 @@ export default function CustomerHome() {
       {selectedDishModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-espresso/50 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-sm rounded-3xl border border-cream-border/90 bg-white p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[85vh] overflow-y-auto overscroll-contain">
+            <figure className="overflow-hidden rounded-2xl border border-cream-border bg-cream-soft">
+              <img
+                src={selectedDishModal.image}
+                alt={selectedDishModal.imageAlt}
+                width={640}
+                height={360}
+                className="h-40 w-full object-contain"
+              />
+              <figcaption className="px-3 pb-2 text-xs text-coffee-muted">
+                Imagen ilustrativa; la presentación puede variar.
+              </figcaption>
+            </figure>
             {/* Indicador visual de arrastre / sheet */}
             <div className="w-10 h-1 bg-cream-border rounded-full mx-auto -mt-1 mb-2" />
 
@@ -2019,7 +1807,7 @@ export default function CustomerHome() {
               <div className="min-w-0">
                 <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
                   {(() => {
-                    const r = RESTAURANTS_CATALOG.find(
+                    const r = restaurants.find(
                       (rest) => rest.id === selectedDishModal.restaurantId,
                     );
                     return r?.name || "Restaurante Aliado";
@@ -2125,7 +1913,7 @@ export default function CustomerHome() {
               <button
                 type="button"
                 onClick={() => {
-                  const targetRestaurant = RESTAURANTS_CATALOG.find(
+                  const targetRestaurant = restaurants.find(
                     (r) => r.id === selectedDishModal.restaurantId,
                   );
                   if (targetRestaurant) {

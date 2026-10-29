@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { RestaurantCatalogPanel } from "../components/restaurant-catalog-panel";
 import {
   ChefHat,
   Clock,
@@ -18,20 +19,20 @@ import {
   ArrowRight,
   ShieldCheck,
   Flame,
-} from 'lucide-react';
-import { PROJECT_NAME, formatCurrencyMXN } from '@coconea/shared';
+} from "lucide-react";
+import { PROJECT_NAME, formatCurrencyMXN } from "@coconea/shared";
 
-type RestaurantTab = 'cocina' | 'metricas' | 'catalogo' | 'perfil';
+type RestaurantTab = "cocina" | "metricas" | "catalogo" | "perfil";
 
 const TAB_LABELS: Record<RestaurantTab, string> = {
-  cocina: 'Cocina',
-  metricas: 'Métricas',
-  catalogo: 'Catálogo',
-  perfil: 'Restaurante',
+  cocina: "Cocina",
+  metricas: "Métricas",
+  catalogo: "Catálogo",
+  perfil: "Restaurante",
 };
 
-export default function RestaurantDashboard() {
-  const [activeTab, setActiveTab] = useState<RestaurantTab>('cocina');
+function RestaurantDashboard() {
+  const [activeTab, setActiveTab] = useState<RestaurantTab>("cocina");
   const [menuOpen, setMenuOpen] = useState(false);
   const [order1Ready, setOrder1Ready] = useState(false);
   const [order2Ready, setOrder2Ready] = useState(false);
@@ -47,7 +48,7 @@ export default function RestaurantDashboard() {
             <button
               type="button"
               onClick={() => {
-                setActiveTab('cocina');
+                setActiveTab("cocina");
                 setMenuOpen(false);
               }}
               className="flex items-center gap-2.5 group text-left cursor-pointer"
@@ -87,12 +88,16 @@ export default function RestaurantDashboard() {
                 onClick={() => setMenuOpen(!menuOpen)}
                 className={`p-2 rounded-2xl border transition-all duration-200 cursor-pointer ${
                   menuOpen
-                    ? 'bg-espresso text-white border-espresso shadow-xs'
-                    : 'bg-cream-container text-espresso border-cream-border hover:bg-cream-container/80'
+                    ? "bg-espresso text-white border-espresso shadow-xs"
+                    : "bg-cream-container text-espresso border-cream-border hover:bg-cream-container/80"
                 }`}
-                aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú'}
+                aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
               >
-                {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {menuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
               </button>
             </div>
           </div>
@@ -105,11 +110,20 @@ export default function RestaurantDashboard() {
                   <Sparkles className="h-3.5 w-3.5" />
                   Operación de Cocina
                 </span>
-                <span className="text-[10px] text-coffee-muted">Bistró Raíces & Grano</span>
+                <span className="text-[10px] text-coffee-muted">
+                  Bistró Raíces & Grano
+                </span>
               </div>
 
               <nav className="space-y-1">
-                {(['cocina', 'metricas', 'catalogo', 'perfil'] as RestaurantTab[]).map((tab) => (
+                {(
+                  [
+                    "cocina",
+                    "metricas",
+                    "catalogo",
+                    "perfil",
+                  ] as RestaurantTab[]
+                ).map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -119,28 +133,32 @@ export default function RestaurantDashboard() {
                     }}
                     className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition text-left cursor-pointer ${
                       activeTab === tab
-                        ? 'bg-espresso text-white shadow-xs'
-                        : 'text-coffee hover:bg-cream-container hover:text-espresso'
+                        ? "bg-espresso text-white shadow-xs"
+                        : "text-coffee hover:bg-cream-container hover:text-espresso"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <div
                         className={`p-1.5 rounded-xl border ${
                           activeTab === tab
-                            ? 'bg-white/20 text-white border-white/30'
-                            : 'bg-cream-container text-caramel border-cream-border'
+                            ? "bg-white/20 text-white border-white/30"
+                            : "bg-cream-container text-caramel border-cream-border"
                         }`}
                       >
-                        {tab === 'cocina' && <UtensilsCrossed className="h-4 w-4" />}
-                        {tab === 'metricas' && <BarChart3 className="h-4 w-4" />}
-                        {tab === 'catalogo' && <BookOpen className="h-4 w-4" />}
-                        {tab === 'perfil' && <Store className="h-4 w-4" />}
+                        {tab === "cocina" && (
+                          <UtensilsCrossed className="h-4 w-4" />
+                        )}
+                        {tab === "metricas" && (
+                          <BarChart3 className="h-4 w-4" />
+                        )}
+                        {tab === "catalogo" && <BookOpen className="h-4 w-4" />}
+                        {tab === "perfil" && <Store className="h-4 w-4" />}
                       </div>
                       <span>
-                        {tab === 'cocina' && 'Monitor de Cocina (KDS)'}
-                        {tab === 'metricas' && 'Métricas y Tiempos'}
-                        {tab === 'catalogo' && 'Catálogo de Alérgenos'}
-                        {tab === 'perfil' && 'Perfil de Restaurante'}
+                        {tab === "cocina" && "Monitor de Cocina (KDS)"}
+                        {tab === "metricas" && "Métricas y Tiempos"}
+                        {tab === "catalogo" && "Catálogo de Alérgenos"}
+                        {tab === "perfil" && "Perfil de Restaurante"}
                       </span>
                     </div>
                     <ArrowRight className="h-3.5 w-3.5 opacity-60" />
@@ -154,7 +172,7 @@ export default function RestaurantDashboard() {
         {/* =========================================================================
             VENTANA 1: COCINA (KDS / MONITOR DE ÓRDENES)
            ========================================================================= */}
-        {activeTab === 'cocina' && (
+        {activeTab === "cocina" && (
           <div className="space-y-4 animate-fadeIn">
             {/* Banner de restaurante activo */}
             <div className="rounded-2xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-3.5 shadow-2xs flex items-center justify-between text-xs">
@@ -181,11 +199,11 @@ export default function RestaurantDashboard() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-[10px] font-bold border ${
                     order1Ready
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : 'bg-cream-container text-caramel border-cream-border'
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      : "bg-cream-container text-caramel border-cream-border"
                   }`}
                 >
-                  {order1Ready ? 'Listo p/ Repartidor' : 'En Cocción'}
+                  {order1Ready ? "Listo p/ Repartidor" : "En Cocción"}
                 </span>
               </div>
 
@@ -213,7 +231,9 @@ export default function RestaurantDashboard() {
                   <Clock className="h-3.5 w-3.5 text-roasted" />
                   Tiempo transcurrido: 12 min
                 </span>
-                <span className="font-bold text-espresso">{formatCurrencyMXN(185.0)}</span>
+                <span className="font-bold text-espresso">
+                  {formatCurrencyMXN(185.0)}
+                </span>
               </div>
 
               <button
@@ -221,12 +241,16 @@ export default function RestaurantDashboard() {
                 onClick={() => setOrder1Ready(!order1Ready)}
                 className={`w-full py-2.5 rounded-full text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                   order1Ready
-                    ? 'border border-cream-border text-coffee-muted hover:bg-cream-container'
-                    : 'bg-espresso text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark'
+                    ? "border border-cream-border text-coffee-muted hover:bg-cream-container"
+                    : "bg-espresso text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark"
                 }`}
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>{order1Ready ? 'Regresar a Cocción' : 'Marcar Listo para Entrega'}</span>
+                <span>
+                  {order1Ready
+                    ? "Regresar a Cocción"
+                    : "Marcar Listo para Entrega"}
+                </span>
               </button>
             </div>
 
@@ -244,11 +268,11 @@ export default function RestaurantDashboard() {
                 <span
                   className={`rounded-full px-2.5 py-1 text-[10px] font-bold border ${
                     order2Ready
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                      : 'bg-cream-soft text-roasted border-cream-border'
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      : "bg-cream-soft text-roasted border-cream-border"
                   }`}
                 >
-                  {order2Ready ? 'Listo p/ Repartidor' : 'Por Iniciar'}
+                  {order2Ready ? "Listo p/ Repartidor" : "Por Iniciar"}
                 </span>
               </div>
 
@@ -272,7 +296,9 @@ export default function RestaurantDashboard() {
                   <Clock className="h-3.5 w-3.5 text-roasted" />
                   Programado: 13:45 hrs
                 </span>
-                <span className="font-bold text-espresso">{formatCurrencyMXN(165.0)}</span>
+                <span className="font-bold text-espresso">
+                  {formatCurrencyMXN(165.0)}
+                </span>
               </div>
 
               <button
@@ -280,12 +306,14 @@ export default function RestaurantDashboard() {
                 onClick={() => setOrder2Ready(!order2Ready)}
                 className={`w-full py-2.5 rounded-full text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
                   order2Ready
-                    ? 'border border-cream-border text-coffee-muted hover:bg-cream-container'
-                    : 'bg-espresso text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark'
+                    ? "border border-cream-border text-coffee-muted hover:bg-cream-container"
+                    : "bg-espresso text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark"
                 }`}
               >
                 <CheckCircle2 className="h-4 w-4" />
-                <span>{order2Ready ? 'Regresar a Cocción' : 'Iniciar Preparación'}</span>
+                <span>
+                  {order2Ready ? "Regresar a Cocción" : "Iniciar Preparación"}
+                </span>
               </button>
             </div>
           </div>
@@ -294,7 +322,7 @@ export default function RestaurantDashboard() {
         {/* =========================================================================
             VENTANA 2: MÉTRICAS Y TIEMPOS
            ========================================================================= */}
-        {activeTab === 'metricas' && (
+        {activeTab === "metricas" && (
           <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
             <div className="text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
@@ -307,33 +335,55 @@ export default function RestaurantDashboard() {
 
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3">
-                <span className="text-[10px] font-bold text-coffee-muted block">Por Preparar</span>
+                <span className="text-[10px] font-bold text-coffee-muted block">
+                  Por Preparar
+                </span>
                 <p className="text-2xl font-black text-espresso mt-1">3</p>
-                <span className="text-[9px] text-caramel font-semibold">T. obj: 20m</span>
+                <span className="text-[9px] text-caramel font-semibold">
+                  T. obj: 20m
+                </span>
               </div>
               <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3">
-                <span className="text-[10px] font-bold text-coffee-muted block">En Cocción</span>
+                <span className="text-[10px] font-bold text-coffee-muted block">
+                  En Cocción
+                </span>
                 <p className="text-2xl font-black text-espresso mt-1">2</p>
-                <span className="text-[9px] text-roasted font-semibold">Chefs act.</span>
+                <span className="text-[9px] text-roasted font-semibold">
+                  Chefs act.
+                </span>
               </div>
               <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3">
-                <span className="text-[10px] font-bold text-coffee-muted block">Listos Rep.</span>
+                <span className="text-[10px] font-bold text-coffee-muted block">
+                  Listos Rep.
+                </span>
                 <p className="text-2xl font-black text-espresso mt-1">1</p>
-                <span className="text-[9px] text-emerald-700 font-semibold">Esperando</span>
+                <span className="text-[9px] text-emerald-700 font-semibold">
+                  Esperando
+                </span>
               </div>
             </div>
 
             <div className="rounded-2xl border border-cream-border bg-white p-4 space-y-2 text-xs">
               <div className="flex justify-between items-center">
-                <span className="text-coffee-muted">Tiempo medio de despacho:</span>
-                <span className="font-extrabold text-espresso">16.4 minutos</span>
+                <span className="text-coffee-muted">
+                  Tiempo medio de despacho:
+                </span>
+                <span className="font-extrabold text-espresso">
+                  16.4 minutos
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-coffee-muted">Cumplimiento de alérgenos:</span>
-                <span className="font-extrabold text-emerald-700">100% verificado</span>
+                <span className="text-coffee-muted">
+                  Cumplimiento de alérgenos:
+                </span>
+                <span className="font-extrabold text-emerald-700">
+                  100% verificado
+                </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-coffee-muted">Órdenes atendidas hoy:</span>
+                <span className="text-coffee-muted">
+                  Órdenes atendidas hoy:
+                </span>
                 <span className="font-extrabold text-espresso">14 pedidos</span>
               </div>
             </div>
@@ -343,7 +393,7 @@ export default function RestaurantDashboard() {
         {/* =========================================================================
             VENTANA 3: CATÁLOGO DE PLATILLOS & ALÉRGENOS
            ========================================================================= */}
-        {activeTab === 'catalogo' && (
+        {activeTab === "catalogo" && (
           <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
             <div className="text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
@@ -353,7 +403,8 @@ export default function RestaurantDashboard() {
                 Catálogo de Platillos y Alérgenos
               </h2>
               <p className="text-[11px] text-coffee-muted mt-0.5">
-                Regla de negocio: Sin lista completa de ingredientes, no se asume seguro.
+                Regla de negocio: Sin lista completa de ingredientes, no se
+                asume seguro.
               </p>
             </div>
 
@@ -361,33 +412,51 @@ export default function RestaurantDashboard() {
               <div className="rounded-2xl border border-cream-border bg-white p-3.5 space-y-2 text-xs">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-bold text-espresso text-xs">Bowl Rústico de Quinoa</h3>
-                    <p className="text-[10px] text-coffee-muted">580 kcal • Quinoa, Salmón, Aguacate</p>
+                    <h3 className="font-bold text-espresso text-xs">
+                      Bowl Rústico de Quinoa
+                    </h3>
+                    <p className="text-[10px] text-coffee-muted">
+                      580 kcal • Quinoa, Salmón, Aguacate
+                    </p>
                   </div>
                   <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                     Auditado
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 text-[9px] font-bold text-coffee-muted">
-                  <span className="bg-cream-container px-2 py-0.5 rounded-full">Libre de Gluten</span>
-                  <span className="bg-cream-container px-2 py-0.5 rounded-full">Sin Lácteos</span>
-                  <span className="bg-cream-container px-2 py-0.5 rounded-full">Sin Maní</span>
+                  <span className="bg-cream-container px-2 py-0.5 rounded-full">
+                    Libre de Gluten
+                  </span>
+                  <span className="bg-cream-container px-2 py-0.5 rounded-full">
+                    Sin Lácteos
+                  </span>
+                  <span className="bg-cream-container px-2 py-0.5 rounded-full">
+                    Sin Maní
+                  </span>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-cream-border bg-white p-3.5 space-y-2 text-xs">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-bold text-espresso text-xs">Pechuga al Romero & Salteado</h3>
-                    <p className="text-[10px] text-coffee-muted">490 kcal • Pollo orgánico, Espárragos</p>
+                    <h3 className="font-bold text-espresso text-xs">
+                      Pechuga al Romero & Salteado
+                    </h3>
+                    <p className="text-[10px] text-coffee-muted">
+                      490 kcal • Pollo orgánico, Espárragos
+                    </p>
                   </div>
                   <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
                     Auditado
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 text-[9px] font-bold text-coffee-muted">
-                  <span className="bg-cream-container px-2 py-0.5 rounded-full">Apto Keto</span>
-                  <span className="bg-cream-container px-2 py-0.5 rounded-full">Alto en Proteína</span>
+                  <span className="bg-cream-container px-2 py-0.5 rounded-full">
+                    Apto Keto
+                  </span>
+                  <span className="bg-cream-container px-2 py-0.5 rounded-full">
+                    Alto en Proteína
+                  </span>
                 </div>
               </div>
             </div>
@@ -397,7 +466,7 @@ export default function RestaurantDashboard() {
         {/* =========================================================================
             VENTANA 4: PERFIL DEL RESTAURANTE
            ========================================================================= */}
-        {activeTab === 'perfil' && (
+        {activeTab === "perfil" && (
           <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
             <div className="text-center">
               <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
@@ -414,20 +483,32 @@ export default function RestaurantDashboard() {
                   <Store className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-espresso">Bistró Raíces & Grano</h3>
-                  <p className="text-[11px] text-coffee-muted">ID: REST-001 • Roma Norte</p>
-                  <p className="text-[10px] text-caramel font-bold">Comisión regulada 0% (Demo)</p>
+                  <h3 className="text-sm font-extrabold text-espresso">
+                    Bistró Raíces & Grano
+                  </h3>
+                  <p className="text-[11px] text-coffee-muted">
+                    ID: REST-001 • Roma Norte
+                  </p>
+                  <p className="text-[10px] text-caramel font-bold">
+                    Comisión regulada 0% (Demo)
+                  </p>
                 </div>
               </div>
 
               <div className="pt-2 border-t border-cream-border/70 space-y-1.5 text-[11px]">
                 <div className="flex justify-between">
-                  <span className="text-coffee-muted">Horario de despacho:</span>
-                  <span className="font-bold text-espresso">12:30 - 15:30 hrs</span>
+                  <span className="text-coffee-muted">
+                    Horario de despacho:
+                  </span>
+                  <span className="font-bold text-espresso">
+                    12:30 - 15:30 hrs
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-coffee-muted">Chef responsable:</span>
-                  <span className="font-bold text-espresso">Carlos Valencia</span>
+                  <span className="font-bold text-espresso">
+                    Carlos Valencia
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-coffee-muted">Radio de cobertura:</span>
@@ -454,57 +535,73 @@ export default function RestaurantDashboard() {
         <div className="rounded-full border border-cream-border/90 bg-white/95 backdrop-blur-md px-2 py-1.5 shadow-lg flex items-center justify-around">
           <button
             type="button"
-            onClick={() => setActiveTab('cocina')}
+            onClick={() => setActiveTab("cocina")}
             className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-3 rounded-full transition cursor-pointer ${
-              activeTab === 'cocina'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+              activeTab === "cocina"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <UtensilsCrossed className={`h-4 w-4 ${activeTab === 'cocina' ? 'text-caramel' : 'text-coffee-muted'}`} />
+            <UtensilsCrossed
+              className={`h-4 w-4 ${activeTab === "cocina" ? "text-caramel" : "text-coffee-muted"}`}
+            />
             <span>Cocina</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab('metricas')}
+            onClick={() => setActiveTab("metricas")}
             className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-3 rounded-full transition cursor-pointer ${
-              activeTab === 'metricas'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+              activeTab === "metricas"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <BarChart3 className={`h-4 w-4 ${activeTab === 'metricas' ? 'text-caramel' : 'text-coffee-muted'}`} />
+            <BarChart3
+              className={`h-4 w-4 ${activeTab === "metricas" ? "text-caramel" : "text-coffee-muted"}`}
+            />
             <span>Métricas</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab('catalogo')}
+            onClick={() => setActiveTab("catalogo")}
             className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-3 rounded-full transition cursor-pointer ${
-              activeTab === 'catalogo'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+              activeTab === "catalogo"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <BookOpen className={`h-4 w-4 ${activeTab === 'catalogo' ? 'text-caramel' : 'text-coffee-muted'}`} />
+            <BookOpen
+              className={`h-4 w-4 ${activeTab === "catalogo" ? "text-caramel" : "text-coffee-muted"}`}
+            />
             <span>Catálogo</span>
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab('perfil')}
+            onClick={() => setActiveTab("perfil")}
             className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-3 rounded-full transition cursor-pointer ${
-              activeTab === 'perfil'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+              activeTab === "perfil"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <Store className={`h-4 w-4 ${activeTab === 'perfil' ? 'text-caramel' : 'text-coffee-muted'}`} />
+            <Store
+              className={`h-4 w-4 ${activeTab === "perfil" ? "text-caramel" : "text-coffee-muted"}`}
+            />
             <span>Perfil</span>
           </button>
         </div>
       </nav>
     </div>
+  );
+}
+
+export default function RestaurantPage() {
+  return process.env.NEXT_PUBLIC_APP_MODE === "local" ? (
+    <RestaurantCatalogPanel />
+  ) : (
+    <RestaurantDashboard />
   );
 }

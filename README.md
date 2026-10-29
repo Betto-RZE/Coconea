@@ -99,7 +99,7 @@ coconea/
 ## 🚀 Inicio Rápido (Desarrollo Local)
 
 ### Prerrequisitos
-- Node.js LTS (>= 20)
+- Node.js 24 LTS
 - pnpm (>= 9)
 - Docker Desktop / Docker Compose
 
@@ -124,6 +124,8 @@ coconea/
 ---
 
 ## 📚 Documentación
+
+Para conectar la edición de menús entre las aplicaciones de restaurante y consumidor, consulta [Catálogo local conectado](docs/15-catalogo-local.md), incluyendo migraciones, cuentas de prueba y diferencias con la demo estática.
 
 Consulta la documentación técnica completa en [`docs/`](docs/):
 - [01. Descripción General](docs/01-descripcion-general.md)

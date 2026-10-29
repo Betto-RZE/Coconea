@@ -491,6 +491,14 @@ POST /v1/me/addresses
 
 # 8. Restaurantes y catálogo público
 
+**Implementación local actual:** las rutas de lectura del catálogo y las rutas de administración de productos/perfil indicadas en [15-catalogo-local.md](15-catalogo-local.md) ya tienen persistencia y autorización. Esto no implica que los demás endpoints de este documento estén implementados.
+
+El listado público devuelve `data` como arreglo de establecimientos con `id`, `name`, `description`, `category`, `image_url`, `image_alt`, `version`, `updated_at` y `products`. Los productos incluyen `restaurant_id`, `price` decimal como cadena, `currency: "MXN"`, `category`, `availability_status`, `ingredient_disclosure_status`, listas `ingredients` y `allergens`, campos de imagen y versión. Los ingredientes se normalizan en un catálogo y se vinculan al producto mediante identificadores y declaraciones `CONTAINS` o `MAY_CONTAIN`. El editor permite introducir nombres; la API reutiliza identificadores existentes por nombre normalizado y valida la correspondencia con el identificador. Los alérgenos conservan sus etiquetas declaradas. No se interpreta una lista vacía como garantía alimenticia.
+
+El editor envía la representación editable completa a `PATCH /v1/restaurant/me/products/{product_id}`, junto con `version`; un conflicto devuelve 409 `VERSION_CONFLICT`. `POST` usa los mismos campos sin versión ni identificadores. Los campos de propiedad y los campos desconocidos se rechazan. El perfil admite `name`, `description`, `image_url`, `image_alt` y `version`.
+
+Better Auth atiende `POST /v1/auth/sign-in/email`, `GET /v1/auth/get-session` y `POST /v1/auth/sign-out`. Las cuentas de restaurante se aprovisionan mediante la semilla local, con registro público deshabilitado. Las mutaciones del catálogo exigen cookie de sesión válida, rol `RESTAURANT`, propiedad y origen permitido.
+
 ## 8.1. Endpoints
 
 | Método | Endpoint | Acceso |
