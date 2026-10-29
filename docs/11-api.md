@@ -497,7 +497,7 @@ El listado público devuelve `data` como arreglo de establecimientos con `id`, `
 
 El editor envía la representación editable completa a `PATCH /v1/restaurant/me/products/{product_id}`, junto con `version`; un conflicto devuelve 409 `VERSION_CONFLICT`. `POST` usa los mismos campos sin versión ni identificadores. Los campos de propiedad y los campos desconocidos se rechazan. El perfil admite `name`, `description`, `image_url`, `image_alt` y `version`.
 
-Better Auth atiende `POST /v1/auth/sign-in/email`, `GET /v1/auth/get-session` y `POST /v1/auth/sign-out`. Las cuentas de restaurante se aprovisionan mediante la semilla local, con registro público deshabilitado. Las mutaciones del catálogo exigen cookie de sesión válida, rol `RESTAURANT`, propiedad y origen permitido.
+Better Auth atiende `POST /v1/auth/sign-in/email`, `GET /v1/auth/get-session` y `POST /v1/auth/sign-out`. Las cuentas de restaurante se aprovisionan mediante la semilla local; el registro público está habilitado exclusivamente para consumidores USER. Las mutaciones del catálogo exigen cookie de sesión válida, rol `RESTAURANT`, propiedad y origen permitido.
 
 ## 8.1. Endpoints
 
@@ -2014,3 +2014,6 @@ Esta especificación servirá como base para implementar contratos verificables,
 ---
 
 **Coconea — Planifica tu alimentación, confirma y recibe.**
+## Acceso local implementado del consumidor
+
+Better Auth atiende POST /v1/auth/sign-up/email (name, email, password), POST /v1/auth/sign-in/email, GET /v1/auth/get-session y POST /v1/auth/sign-out. El registro público asigna USER; role y enabled son atributos internos no modificables por el cliente. Las contraseñas se derivan y las sesiones usan cookies HttpOnly. No existe un endpoint público /v1/usuarios para listar identidades. El registro no implementa aún perfil alimenticio ni pedidos.

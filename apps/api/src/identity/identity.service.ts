@@ -30,7 +30,7 @@ export class IdentityService {
       trustedOrigins: allowedOrigins(),
       emailAndPassword: {
         enabled: true,
-        disableSignUp: true,
+        disableSignUp: false,
         requireEmailVerification: false,
       },
       user: {

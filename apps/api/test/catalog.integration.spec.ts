@@ -149,13 +149,23 @@ describe("Catálogo local con PostgreSQL y sesiones Better Auth", () => {
         password,
         role: "RESTAURANT",
       });
-    expect(registration.status).toBeGreaterThanOrEqual(400);
+    if (registration.status === 200) {
+      expect(registration.body.user.role).toBe("USER");
+      expect(
+        (
+          await request(app.getHttpServer())
+            .get("/v1/restaurant/me")
+            .set("Cookie", registration.headers["set-cookie"])
+        ).status,
+      ).toBe(403);
+    } else expect(registration.status).toBeGreaterThanOrEqual(400);
   });
   it("exige sesión y deniega el rol de consumidor", async () => {
     expect(
       (await request(app.getHttpServer()).get("/v1/restaurant/me")).status,
     ).toBe(401);
     const login = await signIn("consumer@test.local");
+    expect(login.status).toBe(200);
     expect(
       (
         await request(app.getHttpServer())
@@ -287,6 +297,33 @@ describe("Catálogo local con PostgreSQL y sesiones Better Auth", () => {
         (p: { id: string }) => p.id === "product-a",
       ).version,
     ).toBe(3);
+  });
+  it("registra consumidores con contraseña derivada y sesión persistente", async () => {
+    const registered = await request(app.getHttpServer())
+      .post("/v1/auth/sign-up/email")
+      .set("Origin", "http://localhost:3000")
+      .send({
+        name: "Consumidor de prueba",
+        email: "signup@test.local",
+        password,
+      });
+    expect(registered.status).toBe(200);
+    expect(registered.body.user.role).toBe("USER");
+    expect(JSON.stringify(registered.body)).not.toContain(password);
+    const db = drizzle(pool);
+    const rows = await db
+      .select()
+      .from(account)
+      .where(eq(account.userId, registered.body.user.id));
+    expect(rows[0].password).not.toBe(password);
+    expect(rows[0].password).toBeTruthy();
+    const current = await request(app.getHttpServer())
+      .get("/v1/auth/get-session")
+      .set("Cookie", registered.headers["set-cookie"]);
+    expect(current.body.user.email).toBe("signup@test.local");
+    expect(
+      (await request(app.getHttpServer()).get("/v1/usuarios")).status,
+    ).toBe(404);
   });
   it("normaliza ingredientes y mantiene relaciones verificables", async () => {
     const firstId = randomUUID();

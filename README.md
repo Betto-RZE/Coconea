@@ -99,27 +99,30 @@ coconea/
 ## 🚀 Inicio Rápido (Desarrollo Local)
 
 ### Prerrequisitos
+
 - Node.js 24 LTS
 - pnpm (>= 9)
 - Docker Desktop / Docker Compose
 
 ### Pasos
-1. Clonar el repositorio y copiar variables de entorno:
-   ```bash
-   cp .env.example .env
-   ```
-2. Iniciar la base de datos local:
-   ```bash
-   docker compose -f infrastructure/docker-compose.yml up -d
-   ```
-3. Instalar dependencias:
-   ```bash
-   pnpm install
-   ```
-4. Ejecutar entorno de desarrollo:
-   ```bash
-   pnpm dev
-   ```
+
+Con Docker Desktop abierto, desde la raíz del repositorio:
+
+```bash
+git switch main
+git pull --ff-only origin main
+pnpm install --frozen-lockfile
+pnpm setup:local
+pnpm dev
+```
+
+`setup:local` crea los archivos de entorno que falten, genera un secreto de sesión aleatorio, inicia PostgreSQL, aplica migraciones y carga el catálogo inicial. Conserva los datos y archivos de entorno existentes.
+
+- Consumidor: http://localhost:3000. Crear una cuenta en `/register`; el acceso local usa Better Auth y PostgreSQL.
+- Restaurante: http://localhost:3001. Correos y contraseñas generados en `tmp/restaurant-accounts.json` (archivo privado de cada instalación, excluido de Git).
+- Repartidor: http://localhost:3002. Administración: http://localhost:3003. API: http://localhost:4000/v1.
+
+El catálogo y las cuentas locales son persistentes. Pedidos, pagos y programaciones siguen siendo prototipos; esta integración no completa esos módulos del MVP.
 
 ---
 
@@ -128,6 +131,7 @@ coconea/
 Para conectar la edición de menús entre las aplicaciones de restaurante y consumidor, consulta [Catálogo local conectado](docs/15-catalogo-local.md), incluyendo migraciones, cuentas de prueba y diferencias con la demo estática.
 
 Consulta la documentación técnica completa en [`docs/`](docs/):
+
 - [01. Descripción General](docs/01-descripcion-general.md)
 - [02. Objetivos y Alcance](docs/02-objetivos-y-alcance.md)
 - [03. Actores y Roles](docs/03-actores-y-roles.md)

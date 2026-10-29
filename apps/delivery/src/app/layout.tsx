@@ -1,17 +1,18 @@
-import type { Metadata } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
-import './globals.css';
+import type { Metadata } from "next";
+import localFont from "next/font/local";
+import "./globals.css";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-plus-jakarta',
-  display: 'swap',
+const plusJakartaSans = localFont({
+  src: "../../../../packages/config/fonts/PlusJakartaSans.ttf",
+  weight: "200 800",
+  variable: "--font-plus-jakarta",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: 'Coconea Repartidor — Panel de Entrega y Rutas',
-  description: 'Panel de operaciones de entrega y seguimiento de pedidos para repartidores de Coconea.',
+  title: "Coconea Repartidor — Panel de Entrega y Rutas",
+  description:
+    "Panel de operaciones de entrega y seguimiento de pedidos para repartidores de Coconea.",
 };
 
 export default function RootLayout({
@@ -27,8 +28,8 @@ export default function RootLayout({
           className="fixed inset-0 pointer-events-none z-0 opacity-[0.18] bg-repeat"
           style={{
             backgroundImage: "url('/images/coconea-wallpaper-diagonal.png')",
-            backgroundSize: '150px 150px',
-            backgroundPosition: '0 0',
+            backgroundSize: "150px 150px",
+            backgroundPosition: "0 0",
           }}
           aria-hidden="true"
         />

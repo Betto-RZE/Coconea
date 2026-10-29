@@ -56,3 +56,9 @@ jobs:
 
       - name: Probar sesiones, permisos y catálogo con PostgreSQL aislado
         run: pnpm --filter @coconea/api test
+
+      - name: Compilar API y aplicaciones
+        run: pnpm build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_APP_MODE: demo

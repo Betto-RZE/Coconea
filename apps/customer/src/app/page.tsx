@@ -41,6 +41,7 @@ import {
   Phone,
   AlertTriangle,
 } from "lucide-react";
+import CustomerDashboard from "@/app/components/CustomerDashboard";
 import { Navbar, CustomerTab } from "@/components/navbar";
 import { useAuth, DEMO_ACCOUNTS } from "@/context/auth-context";
 
@@ -397,7 +398,7 @@ export default function CustomerHome() {
             className="rounded-2xl border border-cream-border bg-white p-3 text-sm text-roasted"
           >
             {catalogError ||
-              "Catálogo local conectado. Las cuentas de consumidor y los pedidos de esta vista siguen siendo demostraciones."}
+              "Catálogo local conectado. Las compras y programaciones de esta vista siguen siendo demostraciones."}
           </p>
         )}
 
@@ -414,6 +415,12 @@ export default function CustomerHome() {
            ========================================================================= */}
         {activeTab === "inicio" && (
           <div className="space-y-3.5 animate-fadeIn">
+            {isAuthenticated && user && (
+              <CustomerDashboard
+                nombre={user.fullName}
+                onNavigateTab={setActiveTab}
+              />
+            )}
             {/* Banner de Saludo y Acceso a la Propuesta */}
             <div className="rounded-2xl border border-cream-border/90 bg-white p-4 shadow-sm flex flex-wrap gap-3 items-center justify-between text-sm">
               <div className="flex items-center gap-2 text-espresso truncate">
@@ -1724,7 +1731,11 @@ export default function CustomerHome() {
                   <button
                     id="btn-profile-logout"
                     type="button"
-                    onClick={() => logout()}
+                    onClick={async () => {
+                      const result = await logout();
+                      if (!result.success)
+                        showToast(result.error || "No se pudo cerrar sesión.");
+                    }}
                     className="w-full flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50/80 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 active:scale-95 transition cursor-pointer"
                   >
                     <LogOut className="h-4 w-4" />

@@ -4,8 +4,13 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*",
+        "$TURBO_ROOT$/packages/config/fonts/**"
+      ],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "out/**"],
+      "env": ["NEXT_PUBLIC_*"]
     },
     "lint": {
       "dependsOn": ["^lint"]

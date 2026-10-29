@@ -56,3 +56,10 @@ temp/
 .cache/
 .eslintcache
 .stylelintcache
+
+# Generated framework files and local databases
+*.tsbuildinfo
+next-env.d.ts
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

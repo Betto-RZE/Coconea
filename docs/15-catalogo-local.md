@@ -8,19 +8,21 @@ Se pueden crear productos y editar nombre, descripción, precio, categoría, ima
 
 El consumidor consulta los datos al entrar, al recuperar el foco y cada cinco segundos mientras la pestaña está visible. No depende de `localStorage`, de cookies entre puertos ni de que ambas vistas estén abiertas en el mismo navegador. Requiere acceso a la misma API. No se sustituyen datos por una simulación cuando falla la API.
 
-**Límite de esta integración:** la autenticación real corresponde al panel de restaurantes y el catálogo. La cuenta de consumidor, programaciones, propuestas, pagos y pedidos de la interfaz anterior siguen siendo prototipos de demostración. El modo local no permite presentar la confirmación simulada como un pedido real.
+**Alcance y límites:** el registro, acceso y cierre de sesión del consumidor y el acceso del restaurante usan Better Auth con PostgreSQL. Programaciones, propuestas, pagos, pedidos y preferencias alimenticias siguen siendo prototipos. El registro local solicita únicamente nombre, correo y contraseña. El modo local no presenta una confirmación simulada como pedido real.
 
 ## Inicio reproducible
 
 Requisitos: Node.js 24 LTS, pnpm según `packageManager` y Docker Desktop iniciado.
 
-1. Copiar `.env.example` a `.env`. Establecer un `BETTER_AUTH_SECRET` aleatorio de al menos 32 caracteres. Nunca reutilizar el ejemplo en un entorno público.
-2. Copiar `apps/customer/.env.example` a `apps/customer/.env.local` y `apps/restaurant/.env.example` a `apps/restaurant/.env.local`.
-3. Instalar dependencias con `pnpm install`.
-4. Iniciar PostgreSQL: `docker compose --env-file .env -f infrastructure/docker-compose.yml up -d postgres`. El puerto de ejemplo es 55432 para no ocupar otro PostgreSQL en 5432.
-5. Aplicar migraciones: `pnpm --filter @coconea/api db:migrate`.
-6. Cargar datos iniciales: `pnpm --filter @coconea/api db:seed`.
-7. Iniciar el proyecto: `pnpm dev`.
+Desde la raíz, ejecutar:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm setup:local
+pnpm dev
+```
+
+El preparador copia los ejemplos únicamente si falta el archivo, sustituye el secreto de ejemplo por uno aleatorio, espera a PostgreSQL y ejecuta migraciones y semilla. No imprime contraseñas. `node scripts/setup-local.mjs --env-only` prepara solo los archivos; `pnpm setup:local --skip-docker` usa una instancia PostgreSQL que ya esté disponible en `DATABASE_URL`.
 
 Las migraciones son versionadas y aditivas. La semilla conserva cuentas y productos existentes; no sobrescribe las ediciones. Para cambios de esquema, generar y revisar una migración con `pnpm --filter @coconea/api db:generate` antes de aplicarla.
 
@@ -28,7 +30,7 @@ Las migraciones son versionadas y aditivas. La semilla conserva cuentas y produc
 
 La semilla crea `mcdonalds@coconea.local`, `subway@coconea.local`, `kfc@coconea.local`, `dominos@coconea.local` y `greengrass@coconea.local` con contraseñas aleatorias individuales.
 
-Las contraseñas nuevas se guardan únicamente en `tmp/restaurant-accounts.json`, excluido de Git. No se imprimen en los logs. El archivo permite entrar en `http://localhost:3001`. Si se ejecuta otra vez la semilla, las contraseñas existentes se conservan. No hay registro público de restaurantes.
+Las contraseñas nuevas se guardan únicamente en `tmp/restaurant-accounts.json`, excluido de Git. No se imprimen en los logs. El archivo permite entrar en `http://localhost:3001`. Si se ejecuta otra vez la semilla, las contraseñas existentes se conservan. No hay registro público de restaurantes. Los consumidores crean su cuenta en http://localhost:3000/register; el servidor asigna exclusivamente el rol USER, sin aceptar el rol enviado por el navegador. Las cuentas de muestra de la demo no son cuentas de la base local. Las cookies de localhost se comparten entre puertos; para usar a la vez dos identidades, abrir perfiles de navegador separados.
 
 Better Auth guarda hashes de contraseña y sesiones en PostgreSQL. La cookie de sesión es HttpOnly; en producción se exige cookie segura y TLS. El control de frecuencia de acceso usa memoria del único proceso de API y se reinicia con él; no sustituye límites de un despliegue público.
 
@@ -61,3 +63,9 @@ Si el puerto 3000 está ocupado por otro proyecto, configurar `PORT=3005` en `ap
 - Prueba manual: entrar a un restaurante, editar un producto, guardar y comprobar el cambio en `http://localhost:3000` tras unos segundos o al volver a la pestaña.
 
 Los scripts de lint del repositorio todavía son marcadores de posición; no equivalen a una validación de ESLint. Las comprobaciones de tipos, compilación y pruebas de integración son ejecutables.
+
+## Integración con el trabajo remoto
+
+Se conserva el historial de ambas ramas y se adapta la bienvenida del consumidor. La implementación SQLite/TypeORM y sus endpoints sin autorización se sustituyen por el catálogo PostgreSQL/Drizzle y las sesiones Better Auth; no se importa la base SQLite. Las cuatro webs usan la tipografía local Plus Jakarta Sans incluida con su licencia OFL para compilar sin descargar fuentes.
+
+Si Docker Desktop falla antes de iniciar el motor, no ejecutar un restablecimiento de fábrica para preparar Coconea. La aplicación requiere que Docker esté operativo; el preparador no borra volúmenes ni repara la instalación de Docker.

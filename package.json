@@ -11,7 +11,8 @@
     "test": "turbo run test",
     "check-types": "turbo run check-types",
     "clean": "turbo run clean",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "setup:local": "node scripts/setup-local.mjs"
   },
   "devDependencies": {
     "turbo": "^2.4.4",
