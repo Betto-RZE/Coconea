@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import Link from "next/link";
 import {
   PROJECT_NAME,
   PROJECT_MOTTO,
   formatCurrencyMXN,
-} from '@coconea/shared';
+} from "@coconea/shared";
 import {
   Calendar,
   ShieldCheck,
@@ -17,498 +17,1939 @@ import {
   Clock,
   Flame,
   UtensilsCrossed,
+  Pizza,
+  Salad,
   Info,
   Check,
   ChefHat,
   SlidersHorizontal,
-  Home,
   User as UserIcon,
   ArrowRight,
+  ArrowLeft,
   LogOut,
   Mail,
-  Lock,
-} from 'lucide-react';
-import { Navbar, CustomerTab } from '@/components/navbar';
-import { useAuth, DEMO_ACCOUNTS } from '@/context/auth-context';
+  Search,
+  Star,
+  MapPin,
+  Leaf,
+  Plus,
+  ShoppingBag,
+  Store,
+  X,
+  Phone,
+  AlertTriangle,
+} from "lucide-react";
+import { Navbar, CustomerTab } from "@/components/navbar";
+import { useAuth, DEMO_ACCOUNTS } from "@/context/auth-context";
+
+// =============================================================================
+// MODELOS DE DATOS: RESTAURANTES ALIADOS Y SUS RESPECTIVOS MENÚS
+// =============================================================================
+
+interface DishItem {
+  id: string;
+  restaurantId: string;
+  name: string;
+  category:
+    | "fuertes"
+    | "bowls"
+    | "keto"
+    | "vegano"
+    | "bebidas"
+    | "complementos"
+    | "postres";
+  categoryLabel: string;
+  price: number;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fats: number | null;
+  allergens: string[];
+  safeBadges: string[];
+  ingredients: string[];
+  description: string;
+  highlightTag?: string;
+  isBeverage?: boolean;
+}
+
+interface Restaurant {
+  id: string;
+  name: string;
+  tagline: string;
+  specialty: string;
+  image: string;
+  imageAlt: string;
+  avatarEmoji: string;
+  avatarBg: string;
+  cuisineCategory: "all" | "burgers" | "chicken" | "subs" | "pizza" | "salads";
+  cuisineLabel: string;
+  rating: number;
+  reviewCount: number;
+  distance: string;
+  prepTime: string;
+  address: string;
+  verifiedBadge: string;
+  badges: string[];
+  menuCategories: { id: string; label: string }[];
+  menu: DishItem[];
+}
+
+// -----------------------------------------------------------------------------
+// CATÁLOGO DE RESTAURANTES Y MENÚS DETALLADOS
+// -----------------------------------------------------------------------------
+
+// Reference brands and imagery; all operational and menu data below are fictional.
+function demoDish(
+  id: string,
+  restaurantId: string,
+  name: string,
+  price: number,
+  category: DishItem["category"] = "fuertes",
+): DishItem {
+  return {
+    id,
+    restaurantId,
+    name,
+    price,
+    category,
+    categoryLabel:
+      category === "bebidas"
+        ? "Bebidas"
+        : category === "complementos"
+          ? "Complementos"
+          : category === "postres"
+            ? "Postres"
+            : "Especialidades",
+    calories: null,
+    protein: null,
+    carbs: null,
+    fats: null,
+    allergens: ["Información de alérgenos no verificada"],
+    safeBadges: [],
+    ingredients: [
+      "Consulta la información oficial de ingredientes y alérgenos antes de comprar.",
+    ],
+    description:
+      "Producto de referencia para explorar la demo. Precio y composición no verificados.",
+    isBeverage: category === "bebidas",
+  };
+}
+
+const RESTAURANTS_CATALOG: Restaurant[] = [
+  {
+    id: "rest-raices",
+    name: "McDonald's",
+    tagline: "Hamburguesas, papas y tus clásicos favoritos.",
+    specialty: "Hamburguesas y complementos",
+    image: "/images/restaurants/mcdonalds.jpg",
+    imageAlt: "Hamburguesa de referencia de McDonald's",
+    avatarEmoji: "🍔",
+    avatarBg: "bg-cream-container text-espresso border-cream-border",
+    cuisineCategory: "burgers",
+    cuisineLabel: "Hamburguesas",
+    rating: 4.8,
+    reviewCount: 120,
+    distance: "1.4 km",
+    prepTime: "25–35 min",
+    address: "Sucursal de demostración",
+    verifiedBadge: "Marca de referencia · Demo",
+    badges: [],
+    menuCategories: [
+      { id: "all", label: "Todo el menú" },
+      { id: "fuertes", label: "Hamburguesas" },
+      { id: "complementos", label: "Complementos" },
+      { id: "postres", label: "Postres" },
+      { id: "bebidas", label: "Bebidas" },
+    ],
+    menu: [
+      demoDish("dish-r1", "rest-raices", "Big Mac", 99),
+      demoDish("dish-r2", "rest-raices", "Cuarto de Libra con Queso", 109),
+      demoDish("dish-r3", "rest-raices", "Hamburguesa con Queso", 59),
+      demoDish("dish-r4", "rest-raices", "McPollo", 89),
+      demoDish("dish-r5", "rest-raices", "McNuggets de 10 piezas", 99),
+      demoDish("dish-r6", "rest-raices", "Doble Hamburguesa con Queso", 79),
+      demoDish("side-r1", "rest-raices", "Papas medianas", 45, "complementos"),
+      demoDish("side-r2", "rest-raices", "Papas grandes", 55, "complementos"),
+      demoDish(
+        "dessert-r1",
+        "rest-raices",
+        "Sundae de chocolate",
+        39,
+        "postres",
+      ),
+      demoDish("bev-r1", "rest-raices", "Refresco", 35, "bebidas"),
+      demoDish("bev-r2", "rest-raices", "Agua embotellada", 29, "bebidas"),
+      demoDish("bev-r3", "rest-raices", "Café americano", 35, "bebidas"),
+    ],
+  },
+  {
+    id: "rest-botanica",
+    name: "Subway",
+    tagline: "Subs para combinar a tu gusto, con vegetales y aderezos.",
+    specialty: "Subs y sándwiches",
+    image: "/images/restaurants/subway.png",
+    imageAlt: "Sándwiches de referencia de Subway",
+    avatarEmoji: "🥖",
+    avatarBg: "bg-cream-container text-espresso border-cream-border",
+    cuisineCategory: "subs",
+    cuisineLabel: "Sándwiches",
+    rating: 4.7,
+    reviewCount: 95,
+    distance: "2.1 km",
+    prepTime: "20–30 min",
+    address: "Sucursal de demostración",
+    verifiedBadge: "Marca de referencia · Demo",
+    badges: [],
+    menuCategories: [
+      { id: "all", label: "Todo el menú" },
+      { id: "fuertes", label: "Subs" },
+      { id: "complementos", label: "Complementos" },
+      { id: "postres", label: "Postres" },
+      { id: "bebidas", label: "Bebidas" },
+    ],
+    menu: [
+      demoDish("dish-b1", "rest-botanica", "Pollo Estilo Teriyaki", 119),
+      demoDish("dish-b2", "rest-botanica", "Italiano B.M.T.", 109),
+      demoDish("dish-b3", "rest-botanica", "Deleite Vegetariano", 89),
+      demoDish("dish-b4", "rest-botanica", "Sub de Atún", 109),
+      demoDish("dish-b5", "rest-botanica", "Sub de Jamón de Pavo", 99),
+      demoDish("dish-b6", "rest-botanica", "Pollo Parmesano", 119),
+      demoDish("side-b1", "rest-botanica", "Papas", 35, "complementos"),
+      demoDish(
+        "side-b2",
+        "rest-botanica",
+        "Boneless Bites",
+        59,
+        "complementos",
+      ),
+      demoDish(
+        "dessert-b1",
+        "rest-botanica",
+        "Galleta con chispas de chocolate",
+        25,
+        "postres",
+      ),
+      demoDish("bev-b1", "rest-botanica", "Agua embotellada", 29, "bebidas"),
+      demoDish(
+        "bev-b2",
+        "rest-botanica",
+        "Bebida de dispensador",
+        35,
+        "bebidas",
+      ),
+      demoDish(
+        "bev-b3",
+        "rest-botanica",
+        "Té negro embotellado",
+        39,
+        "bebidas",
+      ),
+    ],
+  },
+  {
+    id: "rest-pacifico",
+    name: "KFC",
+    tagline: "Pollo crujiente y opciones para compartir.",
+    specialty: "Pollo y complementos",
+    image: "/images/restaurants/kfc.png",
+    imageAlt: "Bucket de pollo de referencia de KFC",
+    avatarEmoji: "🍗",
+    avatarBg: "bg-cream-container text-espresso border-cream-border",
+    cuisineCategory: "chicken",
+    cuisineLabel: "Pollo",
+    rating: 4.6,
+    reviewCount: 110,
+    distance: "1.8 km",
+    prepTime: "30–40 min",
+    address: "Sucursal de demostración",
+    verifiedBadge: "Marca de referencia · Demo",
+    badges: [],
+    menuCategories: [
+      { id: "all", label: "Todo el menú" },
+      { id: "fuertes", label: "Pollo y combos" },
+      { id: "complementos", label: "Complementos" },
+      { id: "postres", label: "Postres" },
+      { id: "bebidas", label: "Bebidas" },
+    ],
+    menu: [
+      demoDish("dish-p1", "rest-pacifico", "Bucket 12 piezas", 499),
+      demoDish("dish-p2", "rest-pacifico", "Megabox Big Krunch", 199),
+      demoDish("dish-p3", "rest-pacifico", "Pieza de pollo", 49),
+      demoDish("dish-p4", "rest-pacifico", "Megabox La Secreta Burger", 219),
+      demoDish("dish-p5", "rest-pacifico", "Megabox Ke-Tiras", 169),
+      demoDish("dish-p6", "rest-pacifico", "Bucket de 8 piezas", 359),
+      demoDish(
+        "side-p1",
+        "rest-pacifico",
+        "Puré individual",
+        45,
+        "complementos",
+      ),
+      demoDish(
+        "side-p2",
+        "rest-pacifico",
+        "Bisquet original",
+        25,
+        "complementos",
+      ),
+      demoDish("dessert-p1", "rest-pacifico", "Pay de manzana", 39, "postres"),
+      demoDish("bev-p1", "rest-pacifico", "Refresco de lata", 35, "bebidas"),
+      demoDish("bev-p2", "rest-pacifico", "Agua embotellada", 29, "bebidas"),
+      demoDish("bev-p3", "rest-pacifico", "Refresco familiar", 65, "bebidas"),
+    ],
+  },
+  {
+    id: "rest-dominos",
+    name: "Domino's",
+    tagline: "Pizzas clásicas y especialidades para compartir.",
+    specialty: "Pizzas y complementos",
+    image: "/images/restaurants/dominos.svg",
+    imageAlt: "Logotipo de referencia de Domino's",
+    avatarEmoji: "🍕",
+    avatarBg: "bg-cream-container text-espresso border-cream-border",
+    cuisineCategory: "pizza",
+    cuisineLabel: "Pizza",
+    rating: 4.7,
+    reviewCount: 130,
+    distance: "2.3 km",
+    prepTime: "30–45 min",
+    address: "Sucursal de demostración",
+    verifiedBadge: "Marca de referencia · Demo",
+    badges: [],
+    menuCategories: [
+      { id: "all", label: "Todo el menú" },
+      { id: "fuertes", label: "Pizzas" },
+      { id: "complementos", label: "Complementos" },
+      { id: "postres", label: "Postres" },
+      { id: "bebidas", label: "Bebidas" },
+    ],
+    menu: [
+      demoDish("dish-d1", "rest-dominos", "Pizza de pepperoni", 199),
+      demoDish("dish-d2", "rest-dominos", "Pizza hawaiana", 219),
+      demoDish("dish-d3", "rest-dominos", "Pizza mexicana", 239),
+      demoDish("dish-d4", "rest-dominos", "Pizza de cuatro quesos", 239),
+      demoDish("dish-d5", "rest-dominos", "Pizza vegetariana", 219),
+      demoDish("dish-d6", "rest-dominos", "Pizza de carnes", 249),
+      demoDish("side-d1", "rest-dominos", "Papotas", 69, "complementos"),
+      demoDish("side-d2", "rest-dominos", "Pan de ajo", 59, "complementos"),
+      demoDish("dessert-d1", "rest-dominos", "Baitz de canela", 69, "postres"),
+      demoDish("bev-d1", "rest-dominos", "Refresco individual", 35, "bebidas"),
+      demoDish("bev-d2", "rest-dominos", "Refresco familiar", 65, "bebidas"),
+      demoDish("bev-d3", "rest-dominos", "Agua embotellada", 29, "bebidas"),
+    ],
+  },
+  {
+    id: "rest-greengrass",
+    name: "Green Grass",
+    tagline: "Ensaladas, bowls y chapatas para variar tu semana.",
+    specialty: "Ensaladas y chapatas",
+    image: "/images/restaurants/greengrass.jpg",
+    imageAlt: "Ensalada de referencia de Green Grass",
+    avatarEmoji: "🥗",
+    avatarBg: "bg-cream-container text-espresso border-cream-border",
+    cuisineCategory: "salads",
+    cuisineLabel: "Ensaladas",
+    rating: 4.8,
+    reviewCount: 85,
+    distance: "1.9 km",
+    prepTime: "20–35 min",
+    address: "Sucursal de demostración",
+    verifiedBadge: "Marca de referencia · Demo",
+    badges: [],
+    menuCategories: [
+      { id: "all", label: "Todo el menú" },
+      { id: "fuertes", label: "Ensaladas" },
+      { id: "complementos", label: "Chapatas" },
+      { id: "bebidas", label: "Bebidas" },
+    ],
+    menu: [
+      demoDish("dish-g1", "rest-greengrass", "Cesar & Bacon", 159),
+      demoDish("dish-g2", "rest-greengrass", "Parmesan Grilled Chicken", 169),
+      demoDish("dish-g3", "rest-greengrass", "Chicken Club Ranch", 169),
+      demoDish("dish-g4", "rest-greengrass", "Asian Tuna Rice", 179),
+      demoDish("dish-g5", "rest-greengrass", "Balsamic Red Apple", 159),
+      demoDish("dish-g6", "rest-greengrass", "Guacamole Chic", 169),
+      demoDish(
+        "side-g1",
+        "rest-greengrass",
+        "Chapata Rustic Pesto",
+        139,
+        "complementos",
+      ),
+      demoDish(
+        "side-g2",
+        "rest-greengrass",
+        "Chapata Italian Chicken Bacon",
+        149,
+        "complementos",
+      ),
+      demoDish(
+        "side-g3",
+        "rest-greengrass",
+        "Green Club Sándwich",
+        149,
+        "complementos",
+      ),
+      demoDish("bev-g1", "rest-greengrass", "Agua embotellada", 29, "bebidas"),
+      demoDish("bev-g2", "rest-greengrass", "Agua de limón", 39, "bebidas"),
+      demoDish("bev-g3", "rest-greengrass", "Té frío", 39, "bebidas"),
+    ],
+  },
+];
+
+const CUISINE_FILTERS = [
+  { id: "all", label: "Todos", icon: Store },
+  { id: "burgers", label: "Hamburguesas", icon: UtensilsCrossed },
+  { id: "pizza", label: "Pizza", icon: Pizza },
+  { id: "salads", label: "Ensaladas", icon: Salad },
+  { id: "chicken", label: "Pollo", icon: ChefHat },
+  { id: "subs", label: "Sándwiches", icon: Leaf },
+];
+
+// Simulación de la planificación semanal de comidas
+interface DayPlan {
+  day: string;
+  fullDay: string;
+  restaurantId: string;
+  dishId: string;
+  status: string;
+}
+
+const INITIAL_WEEKLY_PLAN: DayPlan[] = [
+  {
+    day: "Lun",
+    fullDay: "Lunes",
+    restaurantId: "rest-raices",
+    dishId: "dish-r1",
+    status: "Propuesta de Hoy",
+  },
+  {
+    day: "Mar",
+    fullDay: "Martes",
+    restaurantId: "rest-botanica",
+    dishId: "dish-b1",
+    status: "Programado",
+  },
+  {
+    day: "Mié",
+    fullDay: "Miércoles",
+    restaurantId: "rest-pacifico",
+    dishId: "dish-p1",
+    status: "Programado",
+  },
+  {
+    day: "Jue",
+    fullDay: "Jueves",
+    restaurantId: "rest-raices",
+    dishId: "dish-r2",
+    status: "Programado",
+  },
+  {
+    day: "Vie",
+    fullDay: "Viernes",
+    restaurantId: "rest-botanica",
+    dishId: "dish-b1",
+    status: "Programado",
+  },
+];
+
+// =============================================================================
+// COMPONENTE PRINCIPAL (ENFOQUE MOBILE-FIRST NATIVO)
+// =============================================================================
 
 export default function CustomerHome() {
   const { user, isAuthenticated, logout, login } = useAuth();
-  const [activeTab, setActiveTab] = useState<CustomerTab>('inicio');
-  const [selectedMode, setSelectedMode] = useState<'recommendation' | 'fixed'>('recommendation');
-  const [proposalStatus, setProposalStatus] = useState<'pending' | 'confirmed' | 'rejected'>('pending');
+  const [activeTab, setActiveTab] = useState<CustomerTab>("inicio");
+
+  // Estado del restaurante seleccionado en el directorio (null = lista de restaurantes, string = ver menú de ese restaurante)
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<
+    string | null
+  >(null);
+
+  // Filtros de búsqueda en la vista de restaurantes
+  const [restaurantFilter, setRestaurantFilter] = useState<string>("all");
+  const [restaurantSearchQuery, setRestaurantSearchQuery] = useState("");
+  const restaurantCarousel = useRef<HTMLDivElement>(null);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+
+  // Filtro de categoría dentro del menú del restaurante específico
+  const [menuFilter, setMenuFilter] = useState<string>("all");
+
+  // Propuesta Activa de Hoy (Restaurante y Platillo elegido)
+  const [activeRestaurantId, setActiveRestaurantId] =
+    useState<string>("rest-raices");
+  const [activeDishId, setActiveDishId] = useState<string>("dish-r1");
+  const [selectedBeverageId, setSelectedBeverageId] = useState<string | null>(
+    null,
+  );
+  const [compostableCutlery, setCompostableCutlery] = useState<boolean>(true);
+  const [proposalStatus, setProposalStatus] = useState<
+    "pending" | "confirmed" | "rejected"
+  >("pending");
+
+  // Plan Semanal editable
+  const [weeklyPlan, setWeeklyPlan] = useState<DayPlan[]>(INITIAL_WEEKLY_PLAN);
+  const [selectedPlanDay, setSelectedPlanDay] = useState<string>("Lun");
+  const [planningMode, setPlanningMode] = useState<"recommendation" | "fixed">(
+    "recommendation",
+  );
+  const [editingDayPlan, setEditingDayPlan] = useState<string | null>(null);
+
+  // Modal para detalle nutricional y transparente de platillo
+  const [selectedDishModal, setSelectedDishModal] = useState<DishItem | null>(
+    null,
+  );
+
+  // Modal de confirmación para cambio de restaurante (Regla 8: Un solo restaurante por pedido)
+  const [restaurantSwitchPending, setRestaurantSwitchPending] = useState<{
+    targetRestaurant: Restaurant;
+    targetDish: DishItem;
+  } | null>(null);
+
+  // Mensaje flotante Toast
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3200);
+  };
+
+  // Restaurante activo en la propuesta
+  const currentProposalRestaurant = useMemo(() => {
+    return (
+      RESTAURANTS_CATALOG.find((r) => r.id === activeRestaurantId) ||
+      RESTAURANTS_CATALOG[0]
+    );
+  }, [activeRestaurantId]);
+
+  // Platillo activo en la propuesta
+  const currentProposalDish = useMemo(() => {
+    return (
+      currentProposalRestaurant.menu.find((d) => d.id === activeDishId) ||
+      currentProposalRestaurant.menu[0]
+    );
+  }, [currentProposalRestaurant, activeDishId]);
+
+  // Bebida activa en la propuesta (si existe)
+  const currentProposalBeverage = useMemo(() => {
+    if (!selectedBeverageId) return null;
+    return (
+      currentProposalRestaurant.menu.find((d) => d.id === selectedBeverageId) ||
+      null
+    );
+  }, [currentProposalRestaurant, selectedBeverageId]);
+
+  // Cálculo financiero transparente de la propuesta activa
+  const dishPrice = currentProposalDish.price;
+  const beveragePrice = currentProposalBeverage
+    ? currentProposalBeverage.price
+    : 0;
+  const deliveryFee = 20.0; // Envío refrigerado especializado
+  const ethicalServiceFee = 15.0; // Tarifa ética de plataforma
+  const proposalTotal =
+    dishPrice + beveragePrice + deliveryFee + ethicalServiceFee;
+
+  // Restaurante que se está visualizando en el directorio/drilldown
+  const viewingRestaurant = useMemo(() => {
+    if (!selectedRestaurantId) return null;
+    return (
+      RESTAURANTS_CATALOG.find((r) => r.id === selectedRestaurantId) || null
+    );
+  }, [selectedRestaurantId]);
+
+  // Lista filtrada de restaurantes para el directorio
+  const filteredRestaurants = useMemo(() => {
+    return RESTAURANTS_CATALOG.filter((rest) => {
+      const matchesCategory =
+        restaurantFilter === "all" || rest.cuisineCategory === restaurantFilter;
+      const q = restaurantSearchQuery.toLowerCase();
+      const matchesSearch =
+        rest.name.toLowerCase().includes(q) ||
+        rest.tagline.toLowerCase().includes(q) ||
+        rest.specialty.toLowerCase().includes(q) ||
+        rest.badges.some((b) => b.toLowerCase().includes(q)) ||
+        rest.menu.some((d) => d.name.toLowerCase().includes(q));
+      return matchesCategory && matchesSearch;
+    });
+  }, [restaurantFilter, restaurantSearchQuery, selectedRestaurantId]);
+
+  useEffect(() => {
+    setCarouselIndex(0);
+    restaurantCarousel.current?.scrollTo({ left: 0, behavior: "instant" });
+  }, [restaurantFilter, restaurantSearchQuery]);
+
+  const moveCarousel = (direction: number) => {
+    const carousel = restaurantCarousel.current;
+    const card = carousel?.querySelector("article");
+    if (carousel && card)
+      carousel.scrollBy({
+        left: direction * (card.getBoundingClientRect().width + 16),
+        behavior: "smooth",
+      });
+  };
+
+  // Platillos filtrados dentro del restaurante que se está explorando
+  const filteredRestaurantMenu = useMemo(() => {
+    if (!viewingRestaurant) return [];
+    if (menuFilter === "all") return viewingRestaurant.menu;
+    return viewingRestaurant.menu.filter((d) => d.category === menuFilter);
+  }, [viewingRestaurant, menuFilter]);
+
+  // Manejador de selección de platillo para la propuesta
+  const handleSelectDishForProposal = (
+    restaurant: Restaurant,
+    dish: DishItem,
+  ) => {
+    // Si el platillo pertenece a un restaurante diferente del actual en la propuesta
+    if (activeRestaurantId !== restaurant.id && activeDishId) {
+      setRestaurantSwitchPending({
+        targetRestaurant: restaurant,
+        targetDish: dish,
+      });
+      return;
+    }
+
+    // Mismo restaurante: actualizar platillo o bebida
+    if (dish.isBeverage) {
+      setSelectedBeverageId(dish.id);
+      showToast(`Bebida «${dish.name}» agregada a tu propuesta.`);
+    } else {
+      setActiveRestaurantId(restaurant.id);
+      setActiveDishId(dish.id);
+      // Reiniciar bebida si pertenecía a otra cocina
+      setSelectedBeverageId(null);
+      setProposalStatus("pending");
+      showToast(`¡«${dish.name}» elegido como tu comida de hoy!`);
+    }
+  };
+
+  // Confirmación de cambio de restaurante
+  const handleConfirmRestaurantSwitch = () => {
+    if (!restaurantSwitchPending) return;
+    const { targetRestaurant, targetDish } = restaurantSwitchPending;
+    setActiveRestaurantId(targetRestaurant.id);
+    if (targetDish.isBeverage) {
+      // Elegir primer plato fuerte de ese restaurante y esta bebida
+      const firstMain =
+        targetRestaurant.menu.find((d) => !d.isBeverage) ||
+        targetRestaurant.menu[0];
+      setActiveDishId(firstMain.id);
+      setSelectedBeverageId(targetDish.id);
+    } else {
+      setActiveDishId(targetDish.id);
+      setSelectedBeverageId(null);
+    }
+    setProposalStatus("pending");
+    setRestaurantSwitchPending(null);
+    showToast(`Tu propuesta ahora es de ${targetRestaurant.name}.`);
+    setActiveTab("propuesta");
+  };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between py-4 px-3 sm:py-6 sm:px-4 pb-24 selection:bg-caramel/20 selection:text-espresso">
-      {/* Contenedor Principal Centrado Estilo Mobile (max-w-md) */}
-      <main className="w-full max-w-md mx-auto space-y-4">
-        {/* Barra Superior con Menú de Pantallas */}
+    <div className="customer-shell min-h-screen flex flex-col justify-between px-4 pt-4 sm:px-6 sm:pt-6 selection:bg-caramel/20 selection:text-espresso">
+      {/* Contenedor Principal Centrado Estilo Mobile (max-w-md / 100% en pantallas móviles) */}
+      <main className="w-full max-w-lg mx-auto space-y-5">
+        {/* Barra Superior de la Aplicación */}
         <Navbar activeTab={activeTab} onSelectTab={setActiveTab} />
 
-        {/* =========================================================================
-            VENTANA 1: INICIO & BIENVENIDA
-           ========================================================================= */}
-        {activeTab === 'inicio' && (
-          <div className="space-y-4 animate-fadeIn">
-            {/* Saludo si hay sesión activa */}
-            {isAuthenticated && user && (
-              <div className="rounded-2xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-3.5 shadow-2xs flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 text-espresso truncate">
-                  <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-caramel text-white text-[10px] font-bold">
-                    ✓
-                  </span>
-                  <span className="truncate">
-                    Hola, <strong className="font-bold">{user.fullName}</strong>
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('cuenta')}
-                  className="flex-shrink-0 text-[10px] font-bold text-roasted bg-cream-container border border-cream-border px-2.5 py-0.5 rounded-full hover:bg-cream-container/80 transition cursor-pointer"
-                >
-                  {user.dietaryPreferences?.[0] || 'Plan Equilibrado'} →
-                </button>
-              </div>
-            )}
-
-            {/* Tarjeta Hero Principal */}
-            <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm text-center space-y-4">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-cream-container px-3 py-1 text-[11px] font-semibold text-caramel border border-cream-border shadow-2xs">
-                <Sparkles className="h-3.5 w-3.5 text-caramel" />
-                <span>Sin sorpresas ni cobros automáticos</span>
-              </div>
-
-              <div className="space-y-1.5">
-                <h1 className="text-2xl font-black text-espresso tracking-tight leading-tight">
-                  Alimentación planificada,{' '}
-                  <span className="text-caramel">confirmada por ti</span>
-                </h1>
-                <p className="text-xs text-coffee-muted leading-relaxed font-normal">
-                  {PROJECT_MOTTO}
-                </p>
-              </div>
-
-              {/* Acceso Rápido a la Propuesta del Día */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('propuesta')}
-                  className="w-full rounded-full bg-espresso py-3 px-5 text-xs font-bold text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark transition flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Calendar className="h-4 w-4 text-mocha-light" />
-                  <span>Ver Propuesta de Hoy</span>
-                  <span className="ml-1 px-2 py-0.5 rounded-full bg-caramel text-white text-[10px] font-bold">
-                    Activa
-                  </span>
-                </button>
-              </div>
-            </section>
-
-            {/* Accesos a las otras ventanas en forma de tarjetas interactivas */}
-            <div className="grid grid-cols-2 gap-3 text-left">
-              <button
-                type="button"
-                onClick={() => setActiveTab('modalidad')}
-                className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-2xl bg-cream-container text-caramel border border-cream-border">
-                    <ChefHat className="h-5 w-5" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-coffee-muted" />
-                </div>
-                <div>
-                  <h2 className="text-xs font-bold text-espresso">Modalidades</h2>
-                  <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
-                    Recomendación o selección fija.
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('garantia')}
-                className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-2xs hover:shadow-xs hover:border-caramel/50 transition cursor-pointer flex flex-col justify-between space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="p-2 rounded-2xl bg-cream-container text-espresso border border-cream-border">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-coffee-muted" />
-                </div>
-                <div>
-                  <h2 className="text-xs font-bold text-espresso">Garantía Ética</h2>
-                  <p className="text-[10px] text-coffee-muted leading-snug mt-0.5">
-                    Programar no es comprar ($0 MXN).
-                  </p>
-                </div>
-              </button>
-            </div>
+        {/* Notificación Toast Flotante */}
+        {toastMessage && (
+          <div className="rounded-2xl bg-espresso text-cream px-3.5 py-2.5 text-sm font-semibold shadow-lg border border-caramel/40 flex items-center gap-2 animate-fadeIn z-50">
+            <CheckCircle2 className="h-4 w-4 text-caramel flex-shrink-0" />
+            <span className="flex-1 leading-snug">{toastMessage}</span>
           </div>
         )}
 
         {/* =========================================================================
-            VENTANA 2: PROPUESTA DE HOY
+            VENTANA 1: RESTAURANTES & MENÚS (DIRECTORIO Y DRILLDOWN DE MENÚS)
            ========================================================================= */}
-        {activeTab === 'propuesta' && (
-          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
+        {activeTab === "inicio" && (
+          <div className="space-y-3.5 animate-fadeIn">
+            {/* Banner de Saludo y Acceso a la Propuesta */}
+            <div className="rounded-2xl border border-cream-border/90 bg-white p-4 shadow-sm flex flex-wrap gap-3 items-center justify-between text-sm">
+              <div className="flex items-center gap-2 text-espresso truncate">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-caramel text-white text-[12px] font-bold">
+                  ✓
+                </span>
+                <span className="truncate text-sm sm:text-sm">
+                  {isAuthenticated && user ? (
+                    <>
+                      Hola,{" "}
+                      <strong className="font-bold">
+                        {user.fullName.split(" ")[0]}
+                      </strong>
+                    </>
+                  ) : (
+                    <>Tu próxima comida</>
+                  )}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab("propuesta")}
+                className="flex-shrink-0 text-[12px] font-bold text-caramel bg-cream-container border border-cream-border px-2.5 py-1 rounded-full hover:bg-cream-container/80 active:scale-95 transition cursor-pointer flex items-center gap-1"
+              >
+                <span>Ver propuesta</span>
+                <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+
+            {/* VISTA A: SI NO HAY RESTAURANTE SELECCIONADO -> MOSTRAR DIRECTORIO DE RESTAURANTES */}
+            {!selectedRestaurantId && (
+              <div className="space-y-3">
+                {/* Buscador de Restaurantes */}
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-coffee-muted">
+                    <Search className="h-4 w-4" />
+                  </div>
+                  <input
+                    type="text"
+                    value={restaurantSearchQuery}
+                    onChange={(e) => setRestaurantSearchQuery(e.target.value)}
+                    aria-label="Buscar restaurantes o platillos"
+                    placeholder="Buscar restaurantes o platillos"
+                    className="w-full rounded-2xl border border-cream-border bg-white/95 backdrop-blur-md pl-11 pr-11 py-3.5 text-base text-coffee placeholder-coffee-muted/50 focus:outline-none focus:border-caramel focus:ring-2 focus:ring-caramel/20 shadow-xs transition"
+                  />
+                  {restaurantSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setRestaurantSearchQuery("")}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-coffee-muted hover:text-espresso p-1.5 cursor-pointer"
+                      aria-label="Borrar búsqueda"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtros de Tipo de Cocina en Carrusel Táctil */}
+                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar text-sm scroll-smooth">
+                  {CUISINE_FILTERS.map((cat) => {
+                    const Icon = cat.icon;
+                    const isSelected = restaurantFilter === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setRestaurantFilter(cat.id)}
+                        aria-pressed={isSelected}
+                        className={`flex shrink-0 items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all duration-150 cursor-pointer border active:scale-95 ${
+                          isSelected
+                            ? "bg-espresso text-white border-espresso shadow-xs"
+                            : "bg-white/90 text-roasted border-cream-border hover:bg-cream-container hover:text-espresso"
+                        }`}
+                      >
+                        <Icon className="h-3 w-3" />
+                        <span>{cat.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Banner de Garantía de Selección */}
+                <div className="rounded-3xl border border-cream-border/90 bg-gradient-to-br from-white via-cream-container/40 to-cream-soft p-3.5 shadow-xs space-y-1">
+                  <span className="text-[12px] font-bold uppercase tracking-wider text-caramel flex items-center gap-1">
+                    <Sparkles className="h-3 w-3" />A tu gusto, a tu ritmo
+                  </span>
+                  <p className="text-2xl font-semibold text-espresso leading-tight">
+                    ¿Qué se te antoja hoy?
+                  </p>
+                  <p className="text-[12px] sm:text-sm text-coffee-muted leading-relaxed">
+                    Explora los menús y elige tu comida. Revisa ingredientes y
+                    alérgenos antes de confirmar.
+                  </p>
+                </div>
+
+                {/* Lista de Restaurantes (Tarjetas Táctiles Optimizadas para Móvil) */}
+                <div className="space-y-3">
+                  <div className="flex flex-wrap gap-2 items-center justify-between text-sm px-1">
+                    <span className="font-extrabold text-espresso">
+                      Restaurantes ({filteredRestaurants.length})
+                    </span>
+                    <span className="text-[12px] text-coffee-muted font-medium">
+                      Desliza para explorar
+                    </span>
+                  </div>
+
+                  {filteredRestaurants.length === 0 && (
+                    <div
+                      className="rounded-2xl border border-cream-border bg-white p-6 text-center space-y-2"
+                      role="status"
+                    >
+                      <Search
+                        className="h-6 w-6 mx-auto text-roasted"
+                        aria-hidden="true"
+                      />
+                      <p className="font-semibold text-espresso">
+                        No encontramos restaurantes
+                      </p>
+                      <p className="text-sm text-coffee-muted">
+                        Prueba con otro nombre o cambia el tipo de cocina.
+                      </p>
+                    </div>
+                  )}
+                  <p className="text-xs leading-relaxed text-coffee-muted">
+                    Demo visual con marcas reales, sin afiliación. Menús,
+                    precios, valoraciones y tiempos simulados; imágenes de
+                    referencia.
+                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-roasted" aria-live="polite">
+                      {filteredRestaurants.length ? carouselIndex + 1 : 0} de{" "}
+                      {filteredRestaurants.length} restaurantes
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        aria-label="Restaurante anterior"
+                        disabled={carouselIndex === 0}
+                        onClick={() => moveCarousel(-1)}
+                        className="flex items-center justify-center rounded-full border border-cream-border bg-white text-espresso disabled:opacity-30"
+                      >
+                        <ArrowLeft className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="Restaurante siguiente"
+                        disabled={
+                          carouselIndex >= filteredRestaurants.length - 1
+                        }
+                        onClick={() => moveCarousel(1)}
+                        className="flex items-center justify-center rounded-full border border-cream-border bg-white text-espresso disabled:opacity-30"
+                      >
+                        <ArrowRight className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div
+                    ref={restaurantCarousel}
+                    role="region"
+                    aria-label="Carrusel de restaurantes"
+                    aria-roledescription="carrusel"
+                    tabIndex={0}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "ArrowRight" ||
+                        event.key === "ArrowLeft"
+                      ) {
+                        event.preventDefault();
+                        moveCarousel(event.key === "ArrowRight" ? 1 : -1);
+                      }
+                    }}
+                    onScroll={(event) => {
+                      const carousel = event.currentTarget;
+                      const card = carousel.querySelector("article");
+                      if (card)
+                        setCarouselIndex(
+                          Math.min(
+                            filteredRestaurants.length - 1,
+                            Math.max(
+                              0,
+                              Math.round(
+                                carousel.scrollLeft /
+                                  (card.getBoundingClientRect().width + 16),
+                              ),
+                            ),
+                          ),
+                        );
+                    }}
+                    className="restaurant-carousel flex items-stretch gap-4 overflow-x-auto snap-x snap-mandatory pb-4 pt-1"
+                  >
+                    {filteredRestaurants.map((restaurant) => (
+                      <article
+                        key={restaurant.id}
+                        aria-labelledby={restaurant.id + "-title"}
+                        className="restaurant-slide shrink-0 snap-start overflow-hidden rounded-2xl border border-cream-border bg-white shadow-sm"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedRestaurantId(restaurant.id);
+                            setMenuFilter("all");
+                          }}
+                          aria-label={"Ver menú de " + restaurant.name}
+                          className="flex h-full w-full flex-col text-left transition hover:bg-cream-soft focus-visible:outline-offset-[-3px]"
+                        >
+                          <img
+                            src={restaurant.image}
+                            alt={restaurant.imageAlt}
+                            width={640}
+                            height={360}
+                            className="h-40 w-full bg-cream-container object-contain"
+                          />
+                          <span className="block space-y-2 p-4 sm:p-5">
+                            <span
+                              id={restaurant.id + "-title"}
+                              className="block text-lg font-semibold leading-snug text-espresso"
+                            >
+                              {restaurant.name}
+                            </span>
+                            <span className="block text-sm leading-relaxed text-coffee-muted">
+                              {restaurant.tagline}
+                            </span>
+                          </span>
+                        </button>
+                      </article>
+                    ))}
+                  </div>
+                  <div className="flex justify-center gap-2" aria-hidden="true">
+                    {filteredRestaurants.map((restaurant, index) => (
+                      <span
+                        key={restaurant.id}
+                        className={
+                          index === carouselIndex
+                            ? "h-1.5 w-6 rounded-full bg-espresso"
+                            : "h-1.5 w-1.5 rounded-full bg-mocha-light"
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VISTA B: DRILL-DOWN DEL MENÚ DEL RESTAURANTE SELECCIONADO */}
+            {selectedRestaurantId && viewingRestaurant && (
+              <div className="space-y-3.5 animate-fadeIn">
+                {/* Botón de Regreso al Directorio de Restaurantes */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedRestaurantId(null)}
+                  className="rounded-full border border-cream-border bg-white/95 px-3 py-1.5 text-sm font-bold text-espresso hover:bg-cream-container active:scale-95 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <span>Volver a Restaurantes</span>
+                </button>
+
+                {/* Ficha Cabecera del Restaurante Abierto */}
+                <div className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 shadow-xs space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-2xl border text-xl shadow-2xs ${viewingRestaurant.avatarBg}`}
+                    >
+                      <span>{viewingRestaurant.avatarEmoji}</span>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <h2 className="text-base font-black text-espresso truncate">
+                          {viewingRestaurant.name}
+                        </h2>
+                        <div className="flex items-center text-sm font-bold text-caramel gap-0.5 flex-shrink-0">
+                          <Star className="h-3.5 w-3.5 fill-caramel" />
+                          <span>{viewingRestaurant.rating}</span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-roasted font-medium truncate">
+                        {viewingRestaurant.specialty}
+                      </p>
+                      <span className="text-[12px] text-coffee-muted">
+                        {viewingRestaurant.distance} •{" "}
+                        {viewingRestaurant.prepTime}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-coffee-muted leading-relaxed">
+                    {viewingRestaurant.tagline}
+                  </p>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-cream-border text-[12px] text-coffee-muted">
+                    <span className="flex items-center gap-1 truncate max-w-[150px]">
+                      <MapPin className="h-3 w-3 text-caramel flex-shrink-0" />
+                      <span className="truncate">
+                        {viewingRestaurant.address}
+                      </span>
+                    </span>
+                    <span className="font-bold text-roasted bg-cream-soft px-2 py-0.5 rounded-full border border-cream-border text-[12px] flex-shrink-0">
+                      Marca de referencia · Demo
+                    </span>
+                  </div>
+                </div>
+
+                {/* Filtros de Categorías del Menú de Este Restaurante */}
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-sm scroll-smooth">
+                  {viewingRestaurant.menuCategories.map((cat) => {
+                    const isSelected = menuFilter === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setMenuFilter(cat.id)}
+                        aria-pressed={isSelected}
+                        className={`px-3 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition cursor-pointer border active:scale-95 ${
+                          isSelected
+                            ? "bg-espresso text-white border-espresso shadow-xs"
+                            : "bg-white/90 text-roasted border-cream-border hover:bg-cream-container hover:text-espresso"
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Lista de Platillos y Bebidas del Menú */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-sm px-1">
+                    <span className="font-extrabold text-espresso">
+                      Menú Disponible ({filteredRestaurantMenu.length})
+                    </span>
+                    <span className="text-[12px] text-coffee-muted">
+                      Precios simulados · Demo
+                    </span>
+                  </div>
+
+                  {filteredRestaurantMenu.map((dish) => {
+                    const isChosenDish =
+                      activeRestaurantId === viewingRestaurant.id &&
+                      (activeDishId === dish.id ||
+                        selectedBeverageId === dish.id);
+
+                    return (
+                      <div
+                        key={dish.id}
+                        className={`rounded-3xl border transition-all duration-200 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 shadow-xs space-y-2.5 ${
+                          isChosenDish
+                            ? "border-caramel/70 ring-2 ring-caramel/20 bg-cream-soft/30"
+                            : "border-cream-border/90"
+                        }`}
+                      >
+                        {/* Encabezado del Platillo */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-0.5 min-w-0">
+                            {dish.highlightTag && (
+                              <span className="text-[12px] font-bold text-caramel bg-cream-container px-2 py-0.2 rounded-full border border-cream-border inline-block mb-0.5">
+                                {dish.highlightTag}
+                              </span>
+                            )}
+                            <h3 className="text-base font-extrabold text-espresso leading-snug">
+                              {dish.name}
+                            </h3>
+                            <p className="text-sm text-coffee-muted leading-relaxed line-clamp-2">
+                              {dish.description}
+                            </p>
+                          </div>
+                          <span className="text-base font-extrabold text-espresso flex-shrink-0">
+                            {formatCurrencyMXN(dish.price)}
+                          </span>
+                        </div>
+
+                        {/* Chips de Macronutrientes */}
+                        <div className="grid grid-cols-4 gap-1 p-1.5 rounded-xl bg-cream-container/60 border border-cream-border text-center text-[12px]">
+                          <div>
+                            <span className="block font-bold text-caramel">
+                              {dish.calories || "—"}
+                            </span>
+                            <span className="text-[8px] text-coffee-muted uppercase">
+                              kcal
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block font-bold text-espresso">
+                              {dish.protein ? dish.protein + "g" : "—"}
+                            </span>
+                            <span className="text-[8px] text-coffee-muted uppercase">
+                              Prot
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block font-bold text-espresso">
+                              {dish.carbs ? dish.carbs + "g" : "—"}
+                            </span>
+                            <span className="text-[8px] text-coffee-muted uppercase">
+                              Carbs
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block font-bold text-espresso">
+                              {dish.fats ? dish.fats + "g" : "—"}
+                            </span>
+                            <span className="text-[8px] text-coffee-muted uppercase">
+                              Grasas
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Alérgenos & Inocuidad */}
+                        <div className="flex items-center gap-1 text-[12px] font-bold text-coffee-muted flex-wrap">
+                          {dish.allergens.map((alg) => (
+                            <span
+                              key={alg}
+                              className="bg-white px-2 py-0.5 rounded-full border border-cream-border/80"
+                            >
+                              ✓ {alg}
+                            </span>
+                          ))}
+                        </div>
+
+                        {/* Acciones del Platillo */}
+                        <div className="pt-2 border-t border-cream-border/70 flex items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDishModal(dish)}
+                            className="text-sm font-bold text-roasted hover:text-espresso underline cursor-pointer p-1"
+                          >
+                            Ver Ingredientes
+                          </button>
+
+                          {isChosenDish ? (
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab("propuesta")}
+                              className="rounded-full bg-espresso text-white px-3.5 py-1.5 text-sm font-bold transition flex items-center gap-1 cursor-pointer shadow-xs active:scale-95"
+                            >
+                              <Check className="h-3.5 w-3.5 text-caramel" />
+                              <span>En tu Propuesta</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleSelectDishForProposal(
+                                  viewingRestaurant,
+                                  dish,
+                                )
+                              }
+                              className="rounded-full bg-cream-container hover:bg-espresso hover:text-white text-espresso border border-cream-border px-3.5 py-1.5 text-sm font-bold transition flex items-center gap-1 cursor-pointer active:scale-95"
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>
+                                {dish.isBeverage
+                                  ? "Añadir Bebida"
+                                  : "Elegir Comida"}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Barra Flotante Fija de Resumen Móvil (Aparece justo arriba de la barra de navegación) */}
+                {activeRestaurantId === viewingRestaurant.id && (
+                  <div className="fixed bottom-[74px] inset-x-0 mx-auto max-w-md px-3 z-30 animate-fadeIn">
+                    <div className="rounded-2xl border border-caramel/40 bg-espresso/95 backdrop-blur-md text-white p-3 shadow-xl flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-caramel text-espresso font-black text-sm flex-shrink-0">
+                          ✓
+                        </div>
+                        <div className="truncate">
+                          <p className="text-sm font-bold truncate leading-tight">
+                            {currentProposalDish.name}
+                          </p>
+                          <p className="text-[12px] text-caramel truncate font-medium">
+                            {formatCurrencyMXN(currentProposalDish.price)} •{" "}
+                            {currentProposalRestaurant.name.split(" ")[0]}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("propuesta")}
+                        className="flex-shrink-0 rounded-full bg-caramel text-espresso hover:bg-caramel-light active:scale-95 px-3.5 py-2 text-sm font-black transition cursor-pointer flex items-center gap-1 shadow-xs"
+                      >
+                        <span>Ver Propuesta</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* =========================================================================
+            VENTANA 2: PROPUESTA DE HOY (TU PEDIDO / PROPUESTA ACTIVA)
+           ========================================================================= */}
+        {activeTab === "propuesta" && (
+          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-sm space-y-3.5 animate-fadeIn">
             {/* Encabezado de la Propuesta */}
-            <div className="flex items-center justify-between pb-3 border-b border-cream-border">
+            <div className="flex items-center justify-between pb-2.5 border-b border-cream-border">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
+                <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
                   PROPUESTA DIARIA #8421
                 </span>
                 <h2 className="text-base font-extrabold text-espresso leading-snug">
-                  Bowl Rústico de Quinoa & Salmón
+                  Tu Selección de Comida de Hoy
                 </h2>
               </div>
 
-              {proposalStatus === 'pending' && (
-                <span className="rounded-full bg-cream-container px-2.5 py-1 text-[11px] font-bold text-caramel border border-cream-border flex-shrink-0">
+              {proposalStatus === "pending" && (
+                <span className="rounded-full bg-cream-container px-2.5 py-1 text-sm font-bold text-caramel border border-cream-border flex-shrink-0">
                   Pendiente
                 </span>
               )}
-              {proposalStatus === 'confirmed' && (
-                <span className="rounded-full bg-espresso text-cream px-2.5 py-1 text-[11px] font-bold flex-shrink-0">
+              {proposalStatus === "confirmed" && (
+                <span className="rounded-full bg-espresso text-cream px-2.5 py-1 text-sm font-bold flex-shrink-0">
                   Confirmada
                 </span>
               )}
-              {proposalStatus === 'rejected' && (
-                <span className="rounded-full bg-cream-soft text-coffee-muted px-2.5 py-1 text-[11px] font-bold border border-cream-border flex-shrink-0">
+              {proposalStatus === "rejected" && (
+                <span className="rounded-full bg-cream-soft text-coffee-muted px-2.5 py-1 text-sm font-bold border border-cream-border flex-shrink-0">
                   Rechazada
                 </span>
               )}
             </div>
 
-            {/* Restaurante & Macronutrientes */}
-            <div className="space-y-3 text-xs">
-              <div className="flex justify-between items-center">
-                <span className="text-coffee-muted flex items-center gap-1.5">
-                  <UtensilsCrossed className="h-3.5 w-3.5 text-roasted" />
-                  Restaurante
+            {/* Ficha del Restaurante Seleccionado */}
+            <div className="rounded-2xl border border-cream-border bg-cream-container/40 p-3 space-y-1.5 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-coffee-muted flex items-center gap-1.5 text-sm font-bold">
+                  <Store className="h-4 w-4 text-caramel" />
+                  Restaurante Asignado:
                 </span>
-                <span className="font-semibold text-espresso">Bistró Raíces & Grano</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedRestaurantId(null);
+                    setActiveTab("inicio");
+                  }}
+                  className="text-[12px] font-bold text-caramel underline cursor-pointer hover:text-espresso"
+                >
+                  Cambiar Restaurante
+                </button>
               </div>
 
-              {/* Chips de Macronutrientes */}
-              <div className="grid grid-cols-4 gap-1.5 p-2 rounded-2xl bg-cream-container/70 border border-cream-border text-center text-[11px]">
-                <div className="font-bold text-caramel">
-                  <span className="block text-[9px] uppercase text-coffee-muted">Calorías</span>
-                  580 kcal
+              <div className="flex justify-between items-center pt-0.5">
+                <div>
+                  <h3 className="font-extrabold text-espresso text-sm">
+                    {currentProposalRestaurant.name}
+                  </h3>
+                  <p className="text-[12px] text-coffee-muted">
+                    {currentProposalRestaurant.address} •{" "}
+                    {currentProposalRestaurant.distance}
+                  </p>
                 </div>
-                <div className="font-semibold text-espresso">
-                  <span className="block text-[9px] uppercase text-coffee-muted">Prot</span>
-                  36g
-                </div>
-                <div className="font-semibold text-espresso">
-                  <span className="block text-[9px] uppercase text-coffee-muted">Carbs</span>
-                  42g
-                </div>
-                <div className="font-semibold text-espresso">
-                  <span className="block text-[9px] uppercase text-coffee-muted">Grasas</span>
-                  18g
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <span className="text-coffee-muted flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-roasted" />
-                  Entrega estimada
-                </span>
-                <span className="font-semibold text-espresso">Hoy 13:30 - 14:15 hrs</span>
-              </div>
-
-              <div className="flex justify-between items-center pt-2 border-t border-cream-border/60">
-                <span className="text-coffee-muted">Total cotizado (con envío)</span>
-                <span className="font-extrabold text-espresso text-base">
-                  {formatCurrencyMXN(185.0)}
+                <span className="text-[12px] font-bold text-caramel bg-white px-2 py-0.5 rounded-full border border-cream-border">
+                  ★ {currentProposalRestaurant.rating}
                 </span>
               </div>
             </div>
 
-            {/* Acciones de la propuesta */}
-            {proposalStatus === 'pending' && (
+            {/* Ficha del Platillo Seleccionado */}
+            <div className="space-y-3 text-sm">
+              <div className="rounded-2xl border border-cream-border bg-white p-3 space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div>
+                    <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
+                      Platillo Principal:
+                    </span>
+                    <h3 className="font-extrabold text-espresso text-sm">
+                      {currentProposalDish.name}
+                    </h3>
+                  </div>
+                  <span className="font-extrabold text-espresso text-sm">
+                    {formatCurrencyMXN(currentProposalDish.price)}
+                  </span>
+                </div>
+
+                {/* Macronutrientes en Chips */}
+                <div className="grid grid-cols-4 gap-1 p-1.5 rounded-xl bg-cream-container/60 border border-cream-border text-center text-[12px]">
+                  <div className="font-bold text-caramel">
+                    <span className="block text-[8px] uppercase text-coffee-muted">
+                      Calorías
+                    </span>
+                    {currentProposalDish.calories ?? "—"} kcal
+                  </div>
+                  <div className="font-semibold text-espresso">
+                    <span className="block text-[8px] uppercase text-coffee-muted">
+                      Prot
+                    </span>
+                    {currentProposalDish.protein != null
+                      ? currentProposalDish.protein + "g"
+                      : "—"}
+                  </div>
+                  <div className="font-semibold text-espresso">
+                    <span className="block text-[8px] uppercase text-coffee-muted">
+                      Carbs
+                    </span>
+                    {currentProposalDish.carbs != null
+                      ? currentProposalDish.carbs + "g"
+                      : "—"}
+                  </div>
+                  <div className="font-semibold text-espresso">
+                    <span className="block text-[8px] uppercase text-coffee-muted">
+                      Grasas
+                    </span>
+                    {currentProposalDish.fats != null
+                      ? currentProposalDish.fats + "g"
+                      : "—"}
+                  </div>
+                </div>
+
+                <p className="text-sm text-coffee-muted leading-relaxed line-clamp-2">
+                  {currentProposalDish.description}
+                </p>
+
+                <div className="flex items-center justify-between pt-1 border-t border-cream-border/70 text-[12px]">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDishModal(currentProposalDish)}
+                    className="font-bold text-roasted underline hover:text-espresso"
+                  >
+                    Ver Ingredientes Ficha
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRestaurantId(currentProposalRestaurant.id);
+                      setActiveTab("inicio");
+                    }}
+                    className="font-bold text-caramel underline hover:text-espresso"
+                  >
+                    Cambiar Platillo
+                  </button>
+                </div>
+              </div>
+
+              {/* Bebida Artesanal del Restaurante */}
+              <div className="rounded-2xl border border-cream-border bg-cream-container/30 p-3 space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-espresso text-sm block">
+                    Bebida artesanal de{" "}
+                    {currentProposalRestaurant.name.split(" ")[0]}:
+                  </span>
+                  {selectedBeverageId && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBeverageId(null)}
+                      className="text-[12px] text-coffee-muted underline hover:text-espresso"
+                    >
+                      Quitar bebida
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  {currentProposalRestaurant.menu
+                    .filter((d) => d.isBeverage)
+                    .map((bev) => {
+                      const isSelected = selectedBeverageId === bev.id;
+                      return (
+                        <button
+                          key={bev.id}
+                          type="button"
+                          onClick={() =>
+                            setSelectedBeverageId(isSelected ? null : bev.id)
+                          }
+                          className={`w-full py-2 px-3 rounded-xl border text-left flex justify-between items-center transition cursor-pointer text-sm active:scale-98 ${
+                            isSelected
+                              ? "bg-espresso text-white border-espresso shadow-2xs"
+                              : "bg-white text-coffee border-cream-border hover:bg-cream-container"
+                          }`}
+                        >
+                          <span className="font-semibold truncate max-w-[200px]">
+                            {bev.name}
+                          </span>
+                          <span className="font-bold flex-shrink-0">
+                            +{formatCurrencyMXN(bev.price)}
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
+
+                <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={compostableCutlery}
+                    onChange={(e) => setCompostableCutlery(e.target.checked)}
+                    className="rounded border-cream-border accent-espresso h-4 w-4"
+                  />
+                  <span className="text-sm text-coffee-muted">
+                    Incluir cubiertos ecológicos compostables
+                  </span>
+                </label>
+              </div>
+
+              {/* Entrega y Horario */}
+              <div className="space-y-1.5 pt-1">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-coffee-muted flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-roasted" />
+                    Horario de entrega
+                  </span>
+                  <span className="font-semibold text-espresso">
+                    Hoy 13:30 - 14:15 hrs
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-coffee-muted flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-roasted" />
+                    Dirección guardada
+                  </span>
+                  <span className="font-semibold text-espresso truncate max-w-[190px]">
+                    Calle Durango 154, Roma Norte
+                  </span>
+                </div>
+              </div>
+
+              {/* Desglose de Precios */}
+              <div className="pt-2 border-t border-cream-border/70 space-y-1 text-sm">
+                <div className="flex justify-between text-coffee-muted">
+                  <span>Platillo seleccionado:</span>
+                  <span>{formatCurrencyMXN(dishPrice)}</span>
+                </div>
+                {currentProposalBeverage && (
+                  <div className="flex justify-between text-coffee-muted">
+                    <span>
+                      Bebida ({currentProposalBeverage.name.split(" ")[0]}):
+                    </span>
+                    <span>{formatCurrencyMXN(beveragePrice)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-coffee-muted">
+                  <span>Envío refrigerado especializado:</span>
+                  <span>{formatCurrencyMXN(deliveryFee)}</span>
+                </div>
+                <div className="flex justify-between text-coffee-muted">
+                  <span>Tarifa de servicio ético:</span>
+                  <span>{formatCurrencyMXN(ethicalServiceFee)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-cream-border font-extrabold text-base text-espresso">
+                  <span>Total cotizado:</span>
+                  <span className="text-base text-espresso">
+                    {formatCurrencyMXN(proposalTotal)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Acciones de la Propuesta (Botones Táctiles para Móvil) */}
+            {proposalStatus === "pending" && (
               <div className="pt-2 flex flex-col gap-2">
                 <button
                   id="btn-confirm-proposal"
                   type="button"
-                  onClick={() => setProposalStatus('confirmed')}
-                  className="w-full flex items-center justify-center gap-2 rounded-full bg-espresso py-3 text-xs font-bold text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark transition cursor-pointer"
+                  onClick={() => {
+                    setProposalStatus("confirmed");
+                    showToast(
+                      `¡Comida confirmada con ${currentProposalRestaurant.name}!`,
+                    );
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-full bg-espresso py-3.5 text-sm font-bold text-white shadow-md hover:bg-espresso-light active:scale-95 transition cursor-pointer"
                 >
                   <CheckCircle2 className="h-4 w-4 text-mocha-light" />
-                  <span>Confirmar y Recibir</span>
+                  <span>
+                    Confirmar y Recibir Comida (
+                    {formatCurrencyMXN(proposalTotal)})
+                  </span>
                 </button>
                 <button
                   id="btn-reject-proposal"
                   type="button"
-                  onClick={() => setProposalStatus('rejected')}
-                  className="w-full flex items-center justify-center gap-1.5 rounded-full border border-cream-border py-2.5 text-xs font-semibold text-roasted hover:bg-cream-container transition cursor-pointer"
+                  onClick={() => {
+                    setProposalStatus("rejected");
+                    showToast("Propuesta cancelada sin ningún costo ($0 MXN).");
+                  }}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-full border border-cream-border py-2.5 text-sm font-semibold text-roasted hover:bg-cream-container active:scale-95 transition cursor-pointer"
                 >
                   <XCircle className="h-4 w-4" />
-                  <span>Rechazar ($0 MXN)</span>
+                  <span>Rechazar o Cambiar de Cocina ($0 MXN)</span>
                 </button>
               </div>
             )}
 
-            {proposalStatus === 'confirmed' && (
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-3.5 text-center space-y-1.5 animate-fadeIn">
-                <div className="flex items-center justify-center gap-1.5 text-emerald-800 text-xs font-bold">
+            {proposalStatus === "confirmed" && (
+              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-center space-y-1.5 animate-fadeIn">
+                <div className="flex items-center justify-center gap-1.5 text-emerald-800 text-sm font-bold">
                   <Check className="h-4 w-4 text-emerald-600" />
-                  <span>¡Propuesta confirmada exitosamente!</span>
+                  <span>¡Comida Confirmada Exitosamente!</span>
                 </div>
-                <p className="text-[11px] text-emerald-700">
-                  Se revalidó disponibilidad y el restaurante ha recibido la comanda.
+                <p className="text-sm text-emerald-700 leading-snug">
+                  La comanda ha sido enviada al chef de{" "}
+                  <strong>{currentProposalRestaurant.name}</strong>. Tu pedido
+                  llegará hoy entre 13:30 y 14:15 hrs.
                 </p>
                 <button
                   type="button"
-                  onClick={() => setProposalStatus('pending')}
-                  className="text-[11px] text-emerald-800 underline font-semibold hover:text-emerald-950 block mx-auto cursor-pointer"
+                  onClick={() => setProposalStatus("pending")}
+                  className="text-sm text-emerald-800 underline font-semibold hover:text-emerald-950 block mx-auto cursor-pointer pt-1"
                 >
-                  Reiniciar simulación
+                  Reiniciar simulación de pedido
                 </button>
               </div>
             )}
 
-            {proposalStatus === 'rejected' && (
+            {proposalStatus === "rejected" && (
               <div className="rounded-2xl bg-cream-soft border border-cream-border p-3.5 text-center space-y-1.5 animate-fadeIn">
-                <p className="text-xs font-bold text-espresso">Propuesta rechazada</p>
-                <p className="text-[11px] text-coffee-muted">
-                  No se ha generado ningún pedido ni cobro financiero ($0 MXN).
+                <p className="text-sm font-bold text-espresso">
+                  Propuesta cancelada
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setProposalStatus('pending')}
-                  className="text-[11px] text-caramel underline font-semibold hover:text-espresso block mx-auto cursor-pointer"
-                >
-                  Ver propuesta nuevamente
-                </button>
+                <p className="text-sm text-coffee-muted">
+                  No se generó ningún cargo financiero ($0 MXN). Puedes elegir
+                  otro restaurante y platillo.
+                </p>
+                <div className="flex justify-center gap-3 pt-1 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRestaurantId(null);
+                      setActiveTab("inicio");
+                    }}
+                    className="font-bold text-espresso underline cursor-pointer"
+                  >
+                    Explorar Restaurantes y Menús →
+                  </button>
+                </div>
               </div>
             )}
 
-            {/* Recordatorio de regla de expiración */}
-            <p className="text-center text-[10px] text-coffee-muted flex items-center justify-center gap-1 pt-1">
+            {/* Recordatorio de Regla de Expiración */}
+            <p className="text-center text-[12px] text-coffee-muted flex items-center justify-center gap-1 pt-1">
               <Info className="h-3 w-3 text-caramel flex-shrink-0" />
-              <span>Si no confirmas antes de las 11:30 AM, expirará a $0 MXN.</span>
+              <span>
+                Si no confirmas antes de las 11:30 AM, expira a $0 MXN sin
+                cargos automáticos.
+              </span>
             </p>
           </section>
         )}
 
         {/* =========================================================================
-            VENTANA 3: MODALIDADES DE PLAN
+            VENTANA 3: MI PLAN SEMANAL (RESTAURANTES Y COMIDAS POR DÍA)
            ========================================================================= */}
-        {activeTab === 'modalidad' && (
-          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
+        {activeTab === "modalidad" && (
+          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-sm space-y-3.5 animate-fadeIn">
             <div className="text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
-                Configuración Recurrente
+              <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
+                Planificador de Alimentación
               </span>
               <h2 className="text-base font-extrabold text-espresso">
-                Modalidad de Plan Alimenticio
+                Tu Calendario Semanal de Comidas
               </h2>
-              <p className="text-[11px] text-coffee-muted mt-0.5">
-                Selecciona cómo deseas que Coconea programe tus comidas
+              <p className="text-sm text-coffee-muted mt-0.5">
+                Elige qué restaurante y qué comida recibir cada día de la semana
               </p>
             </div>
 
-            {/* Switch interactivo tipo píldora */}
-            <div className="grid grid-cols-2 p-1 rounded-full bg-cream-container border border-cream-border shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setSelectedMode('recommendation')}
-                className={`py-2 text-xs font-bold rounded-full text-center transition-all duration-200 cursor-pointer ${
-                  selectedMode === 'recommendation'
-                    ? 'bg-espresso text-white shadow-xs'
-                    : 'text-roasted hover:text-espresso'
-                }`}
-              >
-                Recomendación
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedMode('fixed')}
-                className={`py-2 text-xs font-bold rounded-full text-center transition-all duration-200 cursor-pointer ${
-                  selectedMode === 'fixed'
-                    ? 'bg-espresso text-white shadow-xs'
-                    : 'text-roasted hover:text-espresso'
-                }`}
-              >
-                Selección Fija
-              </button>
+            {/* Selector de Días de la Semana con Touch Ergonomics */}
+            <div className="grid grid-cols-5 gap-1.5 p-1 rounded-2xl bg-cream-container/80 border border-cream-border text-center">
+              {weeklyPlan.map((item) => (
+                <button
+                  key={item.day}
+                  type="button"
+                  onClick={() => {
+                    setSelectedPlanDay(item.day);
+                    setEditingDayPlan(null);
+                  }}
+                  className={`py-2 px-1 rounded-xl text-sm font-bold transition cursor-pointer flex flex-col items-center active:scale-95 ${
+                    selectedPlanDay === item.day
+                      ? "bg-espresso text-white shadow-2xs"
+                      : "text-roasted hover:text-espresso hover:bg-cream/70"
+                  }`}
+                >
+                  <span className="text-[12px] font-normal opacity-80">
+                    {item.day}
+                  </span>
+                  <span className="text-sm font-bold">
+                    {(() => {
+                      const r = RESTAURANTS_CATALOG.find(
+                        (rest) => rest.id === item.restaurantId,
+                      );
+                      const d = r?.menu.find((dish) => dish.id === item.dishId);
+                      return d ? `${d.calories}` : "500";
+                    })()}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            {/* Contenido descriptivo de la modalidad seleccionada */}
-            <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-4 text-xs space-y-3">
-              {selectedMode === 'recommendation' ? (
-                <>
-                  <div className="flex items-center gap-2 text-espresso font-bold">
-                    <div className="p-1.5 rounded-xl bg-white border border-cream-border text-caramel">
-                      <ChefHat className="h-4 w-4" />
-                    </div>
-                    <span>Recomendación Inteligente Determinista</span>
-                  </div>
-                  <p className="text-coffee-muted leading-relaxed text-[11px]">
-                    Nuestro motor determinista calcula propuestas balanceadas basadas en tu perfil
-                    nutricional (calorías objetivo, distribución de macronutrientes y exclusión estricta
-                    de alérgenos). No requiere que elijas cada plato manualmente.
-                  </p>
-                  <div className="rounded-xl bg-white border border-cream-border p-2.5 text-[11px] space-y-1">
-                    <div className="font-bold text-espresso">Ventajas para ti:</div>
-                    <ul className="list-disc list-inside text-coffee-muted space-y-0.5">
-                      <li>Variedad balanceada sin repetir platillos consecutivos.</li>
-                      <li>Cumplimiento estricto de intolerancias verificadas.</li>
-                      <li>Notificación matutina lista para tu visto bueno.</li>
-                    </ul>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 text-espresso font-bold">
-                    <div className="p-1.5 rounded-xl bg-white border border-cream-border text-roasted">
-                      <SlidersHorizontal className="h-4 w-4" />
-                    </div>
-                    <span>Selección Fija Recurrente</span>
-                  </div>
-                  <p className="text-coffee-muted leading-relaxed text-[11px]">
-                    Tú seleccionas exactamente los platillos y porciones de tus restaurantes favoritos
-                    para días específicos de la semana. Coconea te genera la propuesta fielmente
-                    en cada ciclo para tu visto bueno.
-                  </p>
-                  <div className="rounded-xl bg-white border border-cream-border p-2.5 text-[11px] space-y-1">
-                    <div className="font-bold text-espresso">Ventajas para ti:</div>
-                    <ul className="list-disc list-inside text-coffee-muted space-y-0.5">
-                      <li>Tus alimentos preferidos de forma consistente.</li>
-                      <li>Control total sobre tus restaurantes predilectos.</li>
-                      <li>Cotización transparente y revalidada en cada ciclo.</li>
-                    </ul>
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Ficha del Día Seleccionado */}
+            {(() => {
+              const currentDayPlan =
+                weeklyPlan.find((d) => d.day === selectedPlanDay) ||
+                weeklyPlan[0];
+              const planRestaurant =
+                RESTAURANTS_CATALOG.find(
+                  (r) => r.id === currentDayPlan.restaurantId,
+                ) || RESTAURANTS_CATALOG[0];
+              const planDish =
+                planRestaurant.menu.find(
+                  (d) => d.id === currentDayPlan.dishId,
+                ) || planRestaurant.menu[0];
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('propuesta')}
-              className="w-full text-center rounded-full bg-espresso py-2.5 text-xs font-bold text-white shadow-xs hover:bg-espresso-light transition cursor-pointer"
-            >
-              Ver Propuesta Actual con esta Modalidad →
-            </button>
+              return (
+                <div className="rounded-2xl border border-cream-border bg-white p-3.5 space-y-3 shadow-2xs">
+                  <div className="flex justify-between items-center border-b border-cream-border pb-2">
+                    <div>
+                      <span className="text-[12px] font-bold uppercase text-caramel">
+                        {currentDayPlan.fullDay}
+                      </span>
+                      <h3 className="text-sm font-extrabold text-espresso">
+                        {planDish.name}
+                      </h3>
+                    </div>
+                    <span className="text-[12px] font-bold text-espresso bg-cream-container border border-cream-border px-2.5 py-0.5 rounded-full">
+                      {formatCurrencyMXN(planDish.price)}
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between items-center text-coffee-muted">
+                      <span>Restaurante elegido:</span>
+                      <span className="font-bold text-espresso">
+                        {planRestaurant.name}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-coffee-muted">
+                      <span>Especialidad:</span>
+                      <span className="font-medium text-roasted">
+                        {planRestaurant.specialty}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-coffee-muted">
+                      <span>Calorías & Proteína:</span>
+                      <span className="font-bold text-caramel">
+                        {planDish.calories} kcal • {planDish.protein}g proteína
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-coffee-muted">
+                      <span>Estado en tu plan:</span>
+                      <span className="font-bold text-caramel">
+                        {currentDayPlan.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Selector interactivo para cambiar restaurante y comida de este día */}
+                  {editingDayPlan === currentDayPlan.day ? (
+                    <div className="pt-2 border-t border-cream-border space-y-2.5 animate-fadeIn">
+                      <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
+                        Selecciona Restaurante para el {currentDayPlan.fullDay}:
+                      </span>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        {RESTAURANTS_CATALOG.map((rest) => (
+                          <button
+                            key={rest.id}
+                            type="button"
+                            onClick={() => {
+                              const firstMain =
+                                rest.menu.find((d) => !d.isBeverage) ||
+                                rest.menu[0];
+                              setWeeklyPlan((prev) =>
+                                prev.map((item) =>
+                                  item.day === currentDayPlan.day
+                                    ? {
+                                        ...item,
+                                        restaurantId: rest.id,
+                                        dishId: firstMain.id,
+                                      }
+                                    : item,
+                                ),
+                              );
+                            }}
+                            className={`p-2 rounded-xl border text-left text-[12px] font-semibold transition active:scale-95 ${
+                              currentDayPlan.restaurantId === rest.id
+                                ? "bg-espresso text-white border-espresso shadow-xs"
+                                : "bg-cream-container/50 text-espresso border-cream-border"
+                            }`}
+                          >
+                            <span className="block font-bold truncate">
+                              {rest.name}
+                            </span>
+                            <span className="text-[12px] opacity-80">
+                              {rest.specialty}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+
+                      <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block pt-1">
+                        Selecciona Comida de {planRestaurant.name.split(" ")[0]}
+                        :
+                      </span>
+                      <div className="space-y-1">
+                        {planRestaurant.menu
+                          .filter((d) => !d.isBeverage)
+                          .map((dish) => (
+                            <button
+                              key={dish.id}
+                              type="button"
+                              onClick={() => {
+                                setWeeklyPlan((prev) =>
+                                  prev.map((item) =>
+                                    item.day === currentDayPlan.day
+                                      ? { ...item, dishId: dish.id }
+                                      : item,
+                                  ),
+                                );
+                                setEditingDayPlan(null);
+                                showToast(
+                                  `Guardado: ${dish.name} para el ${currentDayPlan.fullDay}.`,
+                                );
+                              }}
+                              className={`w-full py-2 px-2.5 rounded-xl border text-left text-sm flex justify-between items-center transition active:scale-98 ${
+                                currentDayPlan.dishId === dish.id
+                                  ? "bg-cream-container text-espresso font-bold border-caramel"
+                                  : "bg-white text-coffee-muted border-cream-border hover:bg-cream-soft"
+                              }`}
+                            >
+                              <span className="truncate max-w-[210px]">
+                                • {dish.name}
+                              </span>
+                              <span className="text-[12px] font-bold flex-shrink-0">
+                                {formatCurrencyMXN(dish.price)}
+                              </span>
+                            </button>
+                          ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setEditingDayPlan(null)}
+                        className="w-full py-2 rounded-full border border-cream-border text-[12px] font-semibold text-coffee-muted hover:bg-cream-container transition"
+                      >
+                        Cerrar Selector
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="pt-2 border-t border-cream-border/70 flex justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingDayPlan(currentDayPlan.day)}
+                        className="w-full py-2.5 rounded-full border border-cream-border text-sm font-bold text-espresso hover:bg-cream-container active:scale-95 transition cursor-pointer"
+                      >
+                        Cambiar Restaurante o Platillo de este Día
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Switch de Modalidad Recurrente */}
+            <div className="rounded-2xl border border-cream-border bg-cream-container/40 p-3.5 space-y-2.5">
+              <div className="text-center">
+                <span className="text-[12px] font-bold uppercase text-roasted block">
+                  Modalidad de Programación
+                </span>
+                <p className="text-sm font-bold text-espresso">
+                  ¿Cómo prefieres que se calculen tus comidas?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 p-1 rounded-full bg-white border border-cream-border shadow-2xs">
+                <button
+                  type="button"
+                  onClick={() => setPlanningMode("recommendation")}
+                  className={`py-2 text-sm font-bold rounded-full text-center transition-all cursor-pointer ${
+                    planningMode === "recommendation"
+                      ? "bg-espresso text-white shadow-xs"
+                      : "text-roasted hover:text-espresso"
+                  }`}
+                >
+                  Recomendación Inteligente
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPlanningMode("fixed")}
+                  className={`py-2 text-sm font-bold rounded-full text-center transition-all cursor-pointer ${
+                    planningMode === "fixed"
+                      ? "bg-espresso text-white shadow-xs"
+                      : "text-roasted hover:text-espresso"
+                  }`}
+                >
+                  Selección Fija
+                </button>
+              </div>
+
+              <p className="text-[12px] sm:text-sm text-coffee-muted leading-relaxed text-center">
+                {planningMode === "recommendation"
+                  ? "El motor determinista rota menús de restaurantes verificados cumpliendo tus metas nutricionales y exclusión de alérgenos."
+                  : "Tú defines exactamente los restaurantes y platillos para cada día de la semana. Coconea cotiza la ocurrencia para tu confirmación diaria."}
+              </p>
+            </div>
           </section>
         )}
 
         {/* =========================================================================
-            VENTANA 4: GARANTÍA ÉTICA («PROGRAMAR NO ES COMPRAR»)
+            VENTANA 4: GARANTÍA & ALÉRGENOS (SALUD Y ÉTICA ALIMENTICIA)
            ========================================================================= */}
-        {activeTab === 'garantia' && (
-          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
+        {activeTab === "garantia" && (
+          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-sm space-y-3.5 animate-fadeIn">
             <div className="text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
-                Nuestra Garantía Ética
+              <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
+                Salud & Transparencia
               </span>
               <h2 className="text-base font-extrabold text-espresso">
-                La Regla de Oro: «Programar no es comprar»
+                Garantía Ética: «Programar no es comprar»
               </h2>
-              <p className="text-[11px] text-coffee-muted mt-1">
-                Tu confirmación voluntaria es el único mecanismo que autoriza un cobro financiero.
+              <p className="text-sm text-coffee-muted mt-0.5">
+                Cero cobros automáticos, trazabilidad higiénica y rigor con tus
+                alérgenos
               </p>
             </div>
 
-            <div className="space-y-2.5 text-xs">
-              {/* Paso 1 */}
-              <div className="rounded-2xl border border-cream-border bg-cream-container/30 p-3.5 flex items-start gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-cream-container text-caramel border border-cream-border font-bold">
-                  <Heart className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-espresso text-xs">1. Tus Preferencias</h3>
-                  <p className="text-[11px] text-coffee-muted leading-snug mt-0.5">
-                    Restricciones y alérgenos con rigor médico ético. Si un plato carece de ingredientes verificados, nunca se asume seguro.
-                  </p>
-                </div>
-              </div>
-
-              {/* Paso 2 */}
-              <div className="rounded-2xl border border-cream-border bg-cream-container/30 p-3.5 flex items-start gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-cream-container text-roasted border border-cream-border font-bold">
-                  <Calendar className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-espresso text-xs">2. Propuesta Oportuna</h3>
-                  <p className="text-[11px] text-coffee-muted leading-snug mt-0.5">
-                    Se genera con anticipación para que la revises. La creación de la propuesta jamás genera un cobro financiero ni toca tus cuentas.
-                  </p>
-                </div>
-              </div>
-
-              {/* Paso 3 */}
-              <div className="rounded-2xl border border-cream-border bg-cream-container/30 p-3.5 flex items-start gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-cream-container text-espresso border border-cream-border font-bold">
+            <div className="space-y-2 text-sm">
+              <div className="rounded-2xl border border-cream-border bg-white p-3 flex items-start gap-2.5">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-cream-container text-caramel font-bold">
                   <ShieldCheck className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-espresso text-xs">3. Confirmación Explícita</h3>
-                  <p className="text-[11px] text-coffee-muted leading-snug mt-0.5">
-                    Solo cuando tú confirmas se valida cobertura, cocina y pago. Si la rechazas o expira, el costo es estrictamente $0 MXN.
+                  <h3 className="font-bold text-espresso text-sm">
+                    1. Rigor Médico con Alérgenos
+                  </h3>
+                  <p className="text-sm text-coffee-muted leading-snug mt-0.5">
+                    Si un restaurante aliado carece de lista completa de
+                    ingredientes verificados, el sistema NUNCA asume que el
+                    platillo es seguro para ti.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-cream-border bg-white p-3 flex items-start gap-2.5">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-cream-container text-roasted font-bold">
+                  <Store className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-espresso text-sm">
+                    2. Un Solo Restaurante por Pedido
+                  </h3>
+                  <p className="text-sm text-coffee-muted leading-snug mt-0.5">
+                    Cada orden se elabora y despacha desde una sola cocina
+                    aliada para garantizar la cadena de temperatura y evitar
+                    contaminación cruzada.
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-cream-border bg-white p-3 flex items-start gap-2.5">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-cream-container text-espresso font-bold">
+                  <CheckCircle2 className="h-4 w-4 text-caramel" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-espresso text-sm">
+                    3. Confirmación Explícita Obligatoria
+                  </h3>
+                  <p className="text-sm text-coffee-muted leading-snug mt-0.5">
+                    Solo cuando tú presionas confirmar se inicia el pedido con
+                    la cocina. Si rechazas o no confirmas antes de las 11:30 AM,
+                    el costo es estrictamente $0 MXN.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl bg-cream-soft border border-cream-border p-3 text-center text-[11px] text-coffee-muted">
-              🔒 <strong>Compromiso $0 MXN:</strong> Sin tarjetas obligatorias ni cobros fantasma.
+            <div className="rounded-2xl bg-cream-soft border border-cream-border p-3 text-center text-sm text-coffee-muted">
+              🌱 <strong>Empaques Compostables:</strong> Todos los pedidos
+              viajan en recipientes de bagazo de caña o papel kraft sellado
+              térmicamente.
             </div>
           </section>
         )}
 
         {/* =========================================================================
-            VENTANA 5: MI CUENTA & PREFERENCIAS
+            VENTANA 5: PERFIL & RESTRICCIONES NUTRICIONALES
            ========================================================================= */}
-        {activeTab === 'cuenta' && (
-          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
+        {activeTab === "cuenta" && (
+          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-sm space-y-3.5 animate-fadeIn">
             <div className="text-center">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
-                Gestión de Perfil
+              <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
+                Perfil de Comensal
               </span>
               <h2 className="text-base font-extrabold text-espresso">
-                {isAuthenticated && user ? 'Tu Cuenta Coconea' : 'Acceso a tu Cuenta'}
+                {isAuthenticated && user
+                  ? "Tu Perfil Nutricional"
+                  : "Acceso a tu Cuenta"}
               </h2>
             </div>
 
             {isAuthenticated && user ? (
-              <div className="space-y-3.5">
-                {/* Tarjeta de usuario */}
-                <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-4 space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-espresso text-cream text-base font-bold shadow-xs">
+              <div className="space-y-3">
+                {/* Datos del Comensal */}
+                <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3.5 space-y-2.5 text-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-espresso text-cream text-base font-bold shadow-xs">
                       {user.fullName.charAt(0)}
                     </div>
                     <div className="flex-1 truncate">
-                      <p className="text-sm font-bold text-espresso truncate">{user.fullName}</p>
-                      <p className="text-xs text-coffee-muted truncate">{user.email}</p>
-                      {user.phone && <p className="text-[11px] text-coffee-muted">{user.phone}</p>}
+                      <p className="text-base font-bold text-espresso truncate">
+                        {user.fullName}
+                      </p>
+                      <p className="text-sm text-coffee-muted truncate">
+                        {user.email}
+                      </p>
+                      <p className="text-sm text-coffee-muted truncate">
+                        Dirección: Roma Norte, CDMX
+                      </p>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-cream-border/70 flex items-center justify-between text-xs">
-                    <span className="text-coffee-muted font-medium">Preferencia activa:</span>
-                    <span className="font-bold text-caramel bg-white px-2.5 py-0.5 rounded-full border border-cream-border">
-                      {user.dietaryPreferences?.[0] || 'Plan Equilibrado'}
+                  {/* Restricciones Activas */}
+                  <div className="pt-2 border-t border-cream-border/70 space-y-1">
+                    <span className="text-[12px] font-bold uppercase text-caramel block">
+                      Preferencia y Alérgenos Activos:
                     </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      <span className="bg-white font-bold text-caramel px-2.5 py-0.5 rounded-full border border-cream-border text-[12px]">
+                        Plan {user.dietaryPreferences?.[0] || "Equilibrado"}
+                      </span>
+                      <span className="bg-white text-roasted px-2.5 py-0.5 rounded-full border border-cream-border text-[12px] font-semibold">
+                        Sin Gluten
+                      </span>
+                      <span className="bg-white text-roasted px-2.5 py-0.5 rounded-full border border-cream-border text-[12px] font-semibold">
+                        Sin Lácteos
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Acciones de Cuenta */}
-                <div className="space-y-2">
+                {/* Historial de Comidas */}
+                <div className="rounded-2xl border border-cream-border bg-white p-3 space-y-2 text-sm">
+                  <span className="font-extrabold text-espresso text-sm block">
+                    Comidas Recientes Confirmadas:
+                  </span>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between items-center p-2 rounded-xl bg-cream-container/30">
+                      <div>
+                        <p className="font-bold text-espresso">
+                          Bowl Rústico de Quinoa
+                        </p>
+                        <p className="text-[12px] text-coffee-muted">
+                          Ayer • Bistró Raíces
+                        </p>
+                      </div>
+                      <span className="text-emerald-700 font-bold text-[12px]">
+                        Entregado ✓
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-xl bg-cream-container/30">
+                      <div>
+                        <p className="font-bold text-espresso">
+                          Pechuga al Romero
+                        </p>
+                        <p className="text-[12px] text-coffee-muted">
+                          Hace 3 días • Cocina Botánica
+                        </p>
+                      </div>
+                      <span className="text-emerald-700 font-bold text-[12px]">
+                        Entregado ✓
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Acciones de Perfil */}
+                <div className="space-y-2 pt-1">
                   <button
                     type="button"
-                    onClick={() => setActiveTab('modalidad')}
-                    className="w-full text-center rounded-full border border-cream-border bg-white py-2.5 text-xs font-bold text-espresso hover:bg-cream-container transition cursor-pointer"
+                    onClick={() => {
+                      setSelectedRestaurantId(null);
+                      setActiveTab("inicio");
+                    }}
+                    className="w-full text-center rounded-full bg-espresso py-3 text-sm font-bold text-white shadow-xs hover:bg-espresso-light active:scale-95 transition cursor-pointer"
                   >
-                    Ajustar Modalidad de Plan
+                    Volver a Explorar Restaurantes
                   </button>
                   <button
                     id="btn-profile-logout"
                     type="button"
                     onClick={() => logout()}
-                    className="w-full flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50/80 py-2.5 text-xs font-bold text-red-700 hover:bg-red-100 transition cursor-pointer"
+                    className="w-full flex items-center justify-center gap-2 rounded-full border border-red-200 bg-red-50/80 py-2.5 text-sm font-bold text-red-700 hover:bg-red-100 active:scale-95 transition cursor-pointer"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Cerrar Sesión</span>
@@ -516,25 +1957,28 @@ export default function CustomerHome() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 text-center">
-                <div className="p-4 rounded-2xl bg-cream-container/60 border border-cream-border text-xs text-coffee-muted space-y-1">
-                  <p className="font-bold text-espresso text-sm">¿Ya tienes cuenta o deseas registrarte?</p>
-                  <p className="text-[11px]">
-                    Inicia sesión para gestionar tus propuestas o crea una cuenta para personalizar tu plan.
+              <div className="space-y-3.5 text-center">
+                <div className="p-3.5 rounded-2xl bg-cream-container/60 border border-cream-border text-sm text-coffee-muted space-y-1">
+                  <p className="font-bold text-espresso text-base">
+                    ¿Deseas personalizar tu alimentación?
+                  </p>
+                  <p className="text-sm">
+                    Inicia sesión para gestionar tus alérgenos, confirmar
+                    pedidos y programar tu semana.
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-2">
                   <Link
                     href="/login"
-                    className="w-full rounded-full bg-espresso py-3 text-xs font-bold text-white shadow-xs hover:bg-espresso-light transition flex items-center justify-center gap-2"
+                    className="w-full rounded-full bg-espresso py-3 text-sm font-bold text-white shadow-xs hover:bg-espresso-light active:scale-95 transition flex items-center justify-center gap-2"
                   >
                     <Mail className="h-4 w-4" />
                     <span>Iniciar Sesión</span>
                   </Link>
                   <Link
                     href="/register"
-                    className="w-full rounded-full border border-cream-border bg-white py-3 text-xs font-bold text-espresso hover:bg-cream-container transition"
+                    className="w-full rounded-full border border-cream-border bg-white py-3 text-sm font-bold text-espresso hover:bg-cream-container active:scale-95 transition"
                   >
                     Crear tu Cuenta
                   </Link>
@@ -542,16 +1986,16 @@ export default function CustomerHome() {
 
                 {/* Acceso Rápido con Cuenta Demo */}
                 <div className="pt-2 border-t border-cream-border">
-                  <p className="text-[10px] text-coffee-muted mb-2 font-medium">
+                  <p className="text-[12px] text-coffee-muted mb-1.5 font-medium">
                     O prueba al instante con una cuenta demo:
                   </p>
                   <button
                     type="button"
                     onClick={() => {
                       const demo = DEMO_ACCOUNTS.standard;
-                      login(demo.email, demo.password || 'Coconea2026!');
+                      login(demo.email, demo.password || "Coconea2026!");
                     }}
-                    className="text-xs font-bold text-caramel hover:text-espresso underline cursor-pointer"
+                    className="text-sm font-bold text-caramel hover:text-espresso underline cursor-pointer p-1"
                   >
                     Entrar como Sofía Méndez (Demo Estándar) →
                   </button>
@@ -562,93 +2006,315 @@ export default function CustomerHome() {
         )}
       </main>
 
+      {/* =========================================================================
+          MODAL INTERACTIVO DE DETALLE NUTRICIONAL DE PLATILLO (BOTTOM-SHEET MÓVIL)
+         ========================================================================= */}
+      {selectedDishModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-espresso/50 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-sm rounded-3xl border border-cream-border/90 bg-white p-4 sm:p-5 shadow-2xl space-y-3.5 max-h-[85vh] overflow-y-auto overscroll-contain">
+            {/* Indicador visual de arrastre / sheet */}
+            <div className="w-10 h-1 bg-cream-border rounded-full mx-auto -mt-1 mb-2" />
+
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <span className="text-[12px] font-bold uppercase tracking-wider text-caramel block">
+                  {(() => {
+                    const r = RESTAURANTS_CATALOG.find(
+                      (rest) => rest.id === selectedDishModal.restaurantId,
+                    );
+                    return r?.name || "Restaurante Aliado";
+                  })()}
+                </span>
+                <h3 className="text-base sm:text-base font-extrabold text-espresso leading-snug">
+                  {selectedDishModal.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDishModal(null)}
+                className="p-1.5 rounded-full text-coffee-muted hover:text-espresso hover:bg-cream-container transition cursor-pointer flex-shrink-0"
+                aria-label="Cerrar ventana de platillo"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-sm sm:text-sm text-coffee-muted leading-relaxed">
+              {selectedDishModal.description}
+            </p>
+
+            {/* Ficha Nutricional en Chips */}
+            <div className="grid grid-cols-4 gap-1 p-2 rounded-2xl bg-cream-container/60 border border-cream-border text-center text-[12px]">
+              <div>
+                <span className="block font-bold text-caramel">
+                  {selectedDishModal.calories ?? "—"}
+                </span>
+                <span className="text-coffee-muted text-[8px] uppercase">
+                  kcal
+                </span>
+              </div>
+              <div>
+                <span className="block font-bold text-espresso">
+                  {selectedDishModal.protein != null
+                    ? selectedDishModal.protein + "g"
+                    : "—"}
+                </span>
+                <span className="text-coffee-muted text-[8px] uppercase">
+                  Prot
+                </span>
+              </div>
+              <div>
+                <span className="block font-bold text-espresso">
+                  {selectedDishModal.carbs != null
+                    ? selectedDishModal.carbs + "g"
+                    : "—"}
+                </span>
+                <span className="text-coffee-muted text-[8px] uppercase">
+                  Carbs
+                </span>
+              </div>
+              <div>
+                <span className="block font-bold text-espresso">
+                  {selectedDishModal.fats != null
+                    ? selectedDishModal.fats + "g"
+                    : "—"}
+                </span>
+                <span className="text-coffee-muted text-[8px] uppercase">
+                  Grasas
+                </span>
+              </div>
+            </div>
+
+            {/* Lista de Ingredientes 100% Declarados */}
+            <div className="space-y-1 text-sm">
+              <span className="font-extrabold text-espresso text-sm block">
+                Ingredientes 100% Declarados:
+              </span>
+              <ul className="space-y-0.5 text-sm text-coffee-muted">
+                {selectedDishModal.ingredients.map((ing) => (
+                  <li
+                    key={ing}
+                    className="flex items-start gap-1.5 leading-snug"
+                  >
+                    <span className="text-caramel font-bold">•</span>
+                    <span>{ing}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Alérgenos */}
+            <div className="space-y-1 text-sm">
+              <span className="font-extrabold text-espresso text-sm block">
+                Información de alérgenos:
+              </span>
+              <div className="flex flex-wrap gap-1 text-[12px] font-bold text-coffee-muted">
+                {selectedDishModal.allergens.map((alg) => (
+                  <span
+                    key={alg}
+                    className="bg-cream-container px-2 py-0.5 rounded-full border border-cream-border"
+                  >
+                    ✓ {alg}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Botón de Selección Móvil Full-Width */}
+            <div className="pt-2 border-t border-cream-border space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const targetRestaurant = RESTAURANTS_CATALOG.find(
+                    (r) => r.id === selectedDishModal.restaurantId,
+                  );
+                  if (targetRestaurant) {
+                    handleSelectDishForProposal(
+                      targetRestaurant,
+                      selectedDishModal,
+                    );
+                  }
+                  setSelectedDishModal(null);
+                }}
+                className="w-full py-3 rounded-full bg-espresso text-white text-sm font-bold shadow-xs hover:bg-espresso-light active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>
+                  {selectedDishModal.isBeverage
+                    ? "Añadir esta Bebida"
+                    : "Elegir para mi Comida"}
+                </span>
+                <span className="text-[12px] opacity-80">
+                  ({formatCurrencyMXN(selectedDishModal.price)})
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDishModal(null)}
+                className="w-full py-2.5 rounded-full border border-cream-border text-sm font-semibold text-roasted hover:bg-cream-container active:scale-95 transition cursor-pointer"
+              >
+                Cerrar Detalle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          MODAL DE CONFIRMACIÓN DE CAMBIO DE RESTAURANTE (REGLA 8: 1 RESTAURANTE/ORDEN)
+         ========================================================================= */}
+      {restaurantSwitchPending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-espresso/50 backdrop-blur-xs animate-fadeIn">
+          <div className="w-full max-w-sm rounded-3xl border border-cream-border bg-white p-4 sm:p-5 shadow-2xl space-y-3.5">
+            {/* Indicador visual de arrastre */}
+            <div className="w-10 h-1 bg-cream-border rounded-full mx-auto -mt-1 mb-1.5" />
+
+            <div className="flex items-center gap-2.5 text-caramel">
+              <div className="p-2 rounded-2xl bg-cream-container border border-cream-border flex-shrink-0">
+                <AlertTriangle className="h-5 w-5 text-caramel" />
+              </div>
+              <div>
+                <span className="text-[12px] font-bold uppercase tracking-wider text-coffee-muted">
+                  Regla de Inocuidad Coconea
+                </span>
+                <h3 className="text-base font-extrabold text-espresso">
+                  ¿Cambiar de restaurante aliado?
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-sm text-coffee-muted leading-relaxed">
+              Tu propuesta actual contiene platillos de{" "}
+              <strong>{currentProposalRestaurant.name}</strong>.
+            </p>
+            <p className="text-sm text-coffee-muted leading-relaxed bg-cream-container/50 p-2.5 rounded-2xl border border-cream-border">
+              💡 <strong>Regla #8:</strong> Cada pedido se prepara y transporta
+              desde una sola cocina para garantizar la cadena de temperatura y
+              trazabilidad estricta de alérgenos.
+            </p>
+            <p className="text-sm text-espresso font-semibold">
+              ¿Deseas reemplazar tu selección actual por{" "}
+              <strong>{restaurantSwitchPending.targetDish.name}</strong> de{" "}
+              <strong>{restaurantSwitchPending.targetRestaurant.name}</strong>?
+            </p>
+
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleConfirmRestaurantSwitch}
+                className="w-full py-3 rounded-full bg-espresso text-white text-sm font-bold shadow-xs hover:bg-espresso-light active:scale-95 transition cursor-pointer"
+              >
+                Sí, cambiar a{" "}
+                {restaurantSwitchPending.targetRestaurant.name.split(" ")[0]}
+              </button>
+              <button
+                type="button"
+                onClick={() => setRestaurantSwitchPending(null)}
+                className="w-full py-2.5 rounded-full border border-cream-border text-sm font-semibold text-roasted hover:bg-cream-container active:scale-95 transition cursor-pointer"
+              >
+                Mantener {currentProposalRestaurant.name.split(" ")[0]}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Pie de página discreto */}
-      <footer className="w-full max-w-md mx-auto text-center text-xs text-coffee-muted mt-6 pb-2">
-        <p className="inline-block bg-white/80 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-cream-border/70 shadow-2xs text-[11px]">
-          © 2026 {PROJECT_NAME} — Planifica, confirma y recibe.
+      <footer className="w-full max-w-md mx-auto text-center text-sm text-coffee-muted mt-5 pb-2">
+        <p className="inline-block bg-white/80 backdrop-blur-xs px-3 py-1 rounded-full border border-cream-border/70 shadow-2xs text-[12px]">
+          © 2026 {PROJECT_NAME} — Planifica tu alimentación, confirma y recibe.
         </p>
       </footer>
 
       {/* =========================================================================
-          BARRA DE NAVEGACIÓN MÓVIL INFERIOR FLOTANTE (BOTTOM TAB BAR)
-          Permite cambiar de ventana al instante SIN scrolls
+          BARRA DE NAVEGACIÓN MÓVIL INFERIOR FLOTANTE (BOTTOM TAB BAR NATIVO)
+          5 Pestañas Gastronómicas con Touch Targets Ergonómicos
          ========================================================================= */}
       <nav
         aria-label="Navegación inferior móvil"
-        className="fixed bottom-3 inset-x-0 mx-auto max-w-md px-3 z-40"
+        className="customer-bottom-nav fixed bottom-0 inset-x-0 mx-auto max-w-lg px-3 z-40 select-none"
       >
-        <div className="rounded-full border border-cream-border/90 bg-white/95 backdrop-blur-md px-2 py-1.5 shadow-lg flex items-center justify-around">
-          {/* Tab 1: Inicio */}
+        <div className="rounded-full border border-cream-border/90 bg-white/95 backdrop-blur-md px-1 py-2 shadow-lg grid grid-cols-5">
+          {/* Tab 1: Restaurantes */}
           <button
             type="button"
-            onClick={() => setActiveTab('inicio')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-2.5 rounded-full transition cursor-pointer ${
-              activeTab === 'inicio'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+            onClick={() => setActiveTab("inicio")}
+            className={`flex flex-col items-center gap-0.5 text-[11px] min-h-12 py-1 px-1 rounded-full transition cursor-pointer active:scale-90 ${
+              activeTab === "inicio"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <Home className={`h-4 w-4 ${activeTab === 'inicio' ? 'text-caramel' : 'text-coffee-muted'}`} />
-            <span>Inicio</span>
+            <Store
+              className={`h-4 w-4 ${activeTab === "inicio" ? "text-caramel" : "text-coffee-muted"}`}
+            />
+            <span>Explorar</span>
           </button>
 
           {/* Tab 2: Propuesta */}
           <button
             type="button"
-            onClick={() => setActiveTab('propuesta')}
-            className={`relative flex flex-col items-center gap-0.5 text-[10px] py-1 px-2.5 rounded-full transition cursor-pointer ${
-              activeTab === 'propuesta'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+            onClick={() => setActiveTab("propuesta")}
+            className={`relative flex flex-col items-center gap-0.5 text-[11px] min-h-12 py-1 px-1 rounded-full transition cursor-pointer active:scale-90 ${
+              activeTab === "propuesta"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <Calendar className={`h-4 w-4 ${activeTab === 'propuesta' ? 'text-caramel' : 'text-coffee-muted'}`} />
+            <Calendar
+              className={`h-4 w-4 ${activeTab === "propuesta" ? "text-caramel" : "text-coffee-muted"}`}
+            />
             <span>Propuesta</span>
-            {proposalStatus === 'pending' && (
+            {proposalStatus === "pending" && (
               <span className="absolute top-1 right-2.5 h-1.5 w-1.5 rounded-full bg-caramel ring-2 ring-white" />
             )}
           </button>
 
-          {/* Tab 3: Modalidad */}
+          {/* Tab 3: Mi Plan */}
           <button
             type="button"
-            onClick={() => setActiveTab('modalidad')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-2.5 rounded-full transition cursor-pointer ${
-              activeTab === 'modalidad'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+            onClick={() => setActiveTab("modalidad")}
+            className={`flex flex-col items-center gap-0.5 text-[11px] min-h-12 py-1 px-1 rounded-full transition cursor-pointer active:scale-90 ${
+              activeTab === "modalidad"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <ChefHat className={`h-4 w-4 ${activeTab === 'modalidad' ? 'text-caramel' : 'text-coffee-muted'}`} />
-            <span>Plan</span>
+            <ChefHat
+              className={`h-4 w-4 ${activeTab === "modalidad" ? "text-caramel" : "text-coffee-muted"}`}
+            />
+            <span>Mi Plan</span>
           </button>
 
           {/* Tab 4: Garantía */}
           <button
             type="button"
-            onClick={() => setActiveTab('garantia')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-2.5 rounded-full transition cursor-pointer ${
-              activeTab === 'garantia'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+            onClick={() => setActiveTab("garantia")}
+            className={`flex flex-col items-center gap-0.5 text-[11px] min-h-12 py-1 px-1 rounded-full transition cursor-pointer active:scale-90 ${
+              activeTab === "garantia"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <ShieldCheck className={`h-4 w-4 ${activeTab === 'garantia' ? 'text-caramel' : 'text-coffee-muted'}`} />
+            <ShieldCheck
+              className={`h-4 w-4 ${activeTab === "garantia" ? "text-caramel" : "text-coffee-muted"}`}
+            />
             <span>Garantía</span>
           </button>
 
-          {/* Tab 5: Cuenta */}
+          {/* Tab 5: Perfil */}
           <button
             type="button"
-            onClick={() => setActiveTab('cuenta')}
-            className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-2.5 rounded-full transition cursor-pointer ${
-              activeTab === 'cuenta'
-                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
-                : 'font-medium text-coffee-muted hover:text-espresso'
+            onClick={() => setActiveTab("cuenta")}
+            className={`flex flex-col items-center gap-0.5 text-[11px] min-h-12 py-1 px-1 rounded-full transition cursor-pointer active:scale-90 ${
+              activeTab === "cuenta"
+                ? "font-bold text-espresso bg-cream-container shadow-2xs"
+                : "font-medium text-coffee-muted hover:text-espresso"
             }`}
           >
-            <UserIcon className={`h-4 w-4 ${activeTab === 'cuenta' ? 'text-caramel' : 'text-coffee-muted'}`} />
-            <span>{isAuthenticated ? 'Perfil' : 'Cuenta'}</span>
+            <UserIcon
+              className={`h-4 w-4 ${activeTab === "cuenta" ? "text-caramel" : "text-coffee-muted"}`}
+            />
+            <span>{isAuthenticated ? "Perfil" : "Entrar"}</span>
           </button>
         </div>
       </nav>
