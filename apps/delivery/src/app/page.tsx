@@ -38,6 +38,8 @@ import {
   sendOrderChatMessage,
   checkOrderRouteCompatibility,
   getOrdersSignature,
+  fetchRealOsrmRoute,
+  latLngToPueblaPoint,
   DEFAULT_COURIER_PROFILE,
   DEFAULT_COURIER_LOCATION,
   COURIER_STEP_LABELS,
@@ -48,6 +50,7 @@ import type {
   CourierInfo,
   CourierTrackingStep,
   GeoPoint,
+  KitchenOrderStage,
 } from "@coconea/types";
 
 const PueblaDeliveryMap = dynamic(
@@ -347,20 +350,97 @@ export default function DeliveryDashboard() {
     await syncOrders();
   };
 
-  // Actualizar paso de seguimiento del repartidor (3.c)
+  // Actualizar paso de seguimiento del repartidor y sincronizar su posición real en la ruta de Puebla
   const handleUpdateStep = async (
     order: ActiveOrder,
     nextStep: CourierTrackingStep,
   ) => {
+    let nextLocation: GeoPoint | undefined;
+    if (nextStep === "ESPERANDO_PEDIDO") {
+      nextLocation = {
+        ...order.restaurantLocation,
+        label: `En sucursal ${order.restaurantName} (${order.restaurantAddress})`,
+      };
+    } else if (nextStep === "EN_ENTREGA") {
+      const osrm = await fetchRealOsrmRoute([
+        order.restaurantLocation,
+        order.customerLocation,
+      ]);
+      const coords = osrm.coordinates;
+      const idx = Math.min(
+        coords.length - 1,
+        Math.max(0, Math.floor(coords.length * 0.25)),
+      );
+      const pt = coords[idx] ?? [
+        order.restaurantLocation.lat,
+        order.restaurantLocation.lng,
+      ];
+      nextLocation = latLngToPueblaPoint(
+        pt[0],
+        pt[1],
+        `En ruta por calles de Puebla hacia ${order.customerName} (25% del trayecto)`,
+      );
+    } else if (nextStep === "EN_DOMICILIO") {
+      nextLocation = {
+        ...order.customerLocation,
+        label: `Afuera del domicilio de ${order.customerName} (${order.customerAddress})`,
+      };
+    }
+
     const updated = await updateCourierTrackingStep(
       order.id,
       nextStep,
-      undefined,
+      nextLocation ? { courierLocation: nextLocation } : undefined,
       API_URL,
     );
     if (updated) {
       setFeedbackBanner(
         `Seguimiento actualizado (${order.id}): ${COURIER_STEP_LABELS[nextStep]}`,
+      );
+      await syncOrders();
+    }
+  };
+
+  // Avanzar posición GPS real del repartidor sobre la ruta OSRM Restaurante -> Cliente
+  const handleAdvanceAlongRoute = async (
+    order: ActiveOrder,
+    progressFraction: number,
+  ) => {
+    if (progressFraction >= 1) {
+      await handleUpdateStep(order, "EN_DOMICILIO");
+      return;
+    }
+    const osrm = await fetchRealOsrmRoute([
+      order.restaurantLocation,
+      order.customerLocation,
+    ]);
+    const coords = osrm.coordinates;
+    const idx = Math.min(
+      coords.length - 1,
+      Math.max(0, Math.floor((coords.length - 1) * progressFraction)),
+    );
+    const pt = coords[idx] ?? [
+      order.restaurantLocation.lat,
+      order.restaurantLocation.lng,
+    ];
+    const pct = Math.round(progressFraction * 100);
+    const nextLocation: GeoPoint = latLngToPueblaPoint(
+      pt[0],
+      pt[1],
+      pct === 0
+        ? `Saliendo de ${order.restaurantName} (${order.restaurantAddress})`
+        : `Avanzando por calles de Puebla hacia ${order.customerName} (${pct}% de la ruta)`,
+    );
+
+    const updated = await updateCourierTrackingStep(
+      order.id,
+      "EN_ENTREGA",
+      { courierLocation: nextLocation },
+      API_URL,
+    );
+    if (updated) {
+      setFeedbackBanner(
+        `Posición en ruta actualizada (${pct}% del trayecto hacia ${order.customerName}). El cliente ve tu avance en tiempo real.`,
       );
       await syncOrders();
     }
@@ -868,9 +948,9 @@ export default function DeliveryDashboard() {
                       {currentActiveOrder.restaurantName}
                     </h2>
                     <p className="text-[11px] text-coffee-muted">
-                      Estado cocina:{" "}
-                      <strong>
-                        {KITCHEN_STAGE_LABELS[currentActiveOrder.kitchenStage]}
+                      Recoger en:{" "}
+                      <strong className="text-espresso">
+                        {currentActiveOrder.restaurantAddress}
                       </strong>
                     </p>
                   </div>
@@ -879,11 +959,122 @@ export default function DeliveryDashboard() {
                   </span>
                 </div>
 
-                {/* BOTONES PARA ACTUALIZAR EL SEGUIMIENTO EN VIVO (3.c) */}
+                {/* ESTADO EN TIEMPO REAL DEL RESTAURANTE (PARA QUE EL REPARTIDOR ORGANICE SUS TIEMPOS) */}
+                <div className="rounded-2xl border border-caramel/40 bg-cream-container/70 p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-espresso flex items-center gap-1.5">
+                      <Store className="h-3.5 w-3.5 text-caramel" />
+                      Estado en Tiempo Real de Cocina ({currentActiveOrder.restaurantName})
+                    </span>
+                    <span className="rounded-full bg-espresso text-white px-2.5 py-0.5 text-[10px] font-extrabold">
+                      {KITCHEN_STAGE_LABELS[currentActiveOrder.kitchenStage]}
+                    </span>
+                  </div>
+
+                  {/* Barra de etapas de cocina en vivo */}
+                  <div className="grid grid-cols-4 gap-1.5 text-center text-[9px] font-bold">
+                    {(
+                      [
+                        { stage: "POR_HACER", label: "1. Por hacer" },
+                        { stage: "EN_PREPARACION", label: "2. Preparando" },
+                        {
+                          stage: "EN_ESPERA_REPARTIDOR",
+                          label: "3. Listo mostrador",
+                        },
+                        { stage: "EN_DELIVERY", label: "4. Recolectado" },
+                      ] as { stage: KitchenOrderStage; label: string }[]
+                    ).map((step, idx) => {
+                      const stageOrder: KitchenOrderStage[] = [
+                        "POR_HACER",
+                        "EN_PREPARACION",
+                        "EN_ESPERA_REPARTIDOR",
+                        "EN_DELIVERY",
+                        "ENTREGADO",
+                      ];
+                      const currentIdx = stageOrder.indexOf(
+                        currentActiveOrder.kitchenStage,
+                      );
+                      const isCompletedOrCurrent = currentIdx >= idx;
+                      const isCurrent =
+                        currentActiveOrder.kitchenStage === step.stage;
+                      return (
+                        <div
+                          key={step.stage}
+                          className={`rounded-xl py-1.5 px-1 border transition ${
+                            isCurrent
+                              ? "bg-espresso text-white border-espresso shadow-2xs"
+                              : isCompletedOrCurrent
+                                ? "bg-emerald-50 text-emerald-900 border-emerald-200"
+                                : "bg-white/80 text-coffee-muted border-cream-border"
+                          }`}
+                        >
+                          {step.label}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Recomendación operativa de tiempos para el repartidor */}
+                  <div
+                    className={`rounded-xl px-3 py-2 text-[11px] font-semibold border ${
+                      currentActiveOrder.kitchenStage === "EN_ESPERA_REPARTIDOR"
+                        ? "bg-emerald-50 border-emerald-300 text-emerald-900"
+                        : currentActiveOrder.kitchenStage === "EN_PREPARACION"
+                          ? "bg-amber-50 border-amber-200 text-amber-900"
+                          : "bg-white border-cream-border text-espresso"
+                    }`}
+                  >
+                    {currentActiveOrder.kitchenStage === "POR_HACER" && (
+                      <span>
+                        ⏳{" "}
+                        <strong>
+                          El restaurante aún no inicia la preparación.
+                        </strong>{" "}
+                        Organiza tu salida con calma rumbo a{" "}
+                        {currentActiveOrder.restaurantAddress}.
+                      </span>
+                    )}
+                    {currentActiveOrder.kitchenStage === "EN_PREPARACION" && (
+                      <span>
+                        🔥{" "}
+                        <strong>
+                          ¡El restaurante ya está cocinando el pedido!
+                        </strong>{" "}
+                        Calcula tu llegada a {currentActiveOrder.restaurantAddress}{" "}
+                        para recogerlo en cuanto salga.
+                      </span>
+                    )}
+                    {currentActiveOrder.kitchenStage ===
+                      "EN_ESPERA_REPARTIDOR" && (
+                      <span>
+                        ✅{" "}
+                        <strong>
+                          ¡PAQUETE LISTO EN MOSTRADOR de{" "}
+                          {currentActiveOrder.restaurantName}!
+                        </strong>{" "}
+                        Pasa por él en {currentActiveOrder.restaurantAddress} y
+                        marca «Ya estoy en entrega».
+                      </span>
+                    )}
+                    {currentActiveOrder.kitchenStage === "EN_DELIVERY" && (
+                      <span>
+                        🛵{" "}
+                        <strong>
+                          Paquete recibido del restaurante.
+                        </strong>{" "}
+                        Avanza sobre la ruta real en Puebla hacia{" "}
+                        {currentActiveOrder.customerAddress}; el cliente ve tu
+                        recorrido en vivo.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* BOTONES PARA ACTUALIZAR EL SEGUIMIENTO DEL PAQUETE EN VIVO (3.c) */}
                 <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3.5 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-extrabold text-espresso">
-                      Actualizar Seguimiento del Pedido:
+                      Actualizar Estado del Paquete:
                     </span>
                     <span className="text-[10px] font-bold text-caramel">
                       {COURIER_STEP_LABELS[currentActiveOrder.courierStep]}
@@ -917,6 +1108,44 @@ export default function DeliveryDashboard() {
                       );
                     })}
                   </div>
+
+                  {/* Controles de avance GPS por calles reales de Puebla cuando el repartidor ya lleva el paquete */}
+                  {(currentActiveOrder.courierStep === "EN_ENTREGA" ||
+                    currentActiveOrder.courierStep === "EN_DOMICILIO") && (
+                    <div className="pt-2 border-t border-cream-border space-y-2">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="font-extrabold text-espresso flex items-center gap-1">
+                          <Navigation className="h-3 w-3 text-caramel" />
+                          Avanzar en Ruta Real (Restaurante → Cliente):
+                        </span>
+                        <span className="text-coffee-muted font-semibold">
+                          Visible en el mapa del cliente
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {[
+                          { label: "25% Ruta", frac: 0.25 },
+                          { label: "50% Mitad", frac: 0.5 },
+                          { label: "75% Cerca", frac: 0.75 },
+                          { label: "100% Llegué", frac: 1 },
+                        ].map((pos) => (
+                          <button
+                            key={pos.label}
+                            type="button"
+                            onClick={() =>
+                              void handleAdvanceAlongRoute(
+                                currentActiveOrder,
+                                pos.frac,
+                              )
+                            }
+                            className="rounded-xl border border-cream-border bg-white hover:bg-espresso hover:text-white px-2 py-1.5 text-[10px] font-extrabold text-espresso transition cursor-pointer shadow-2xs"
+                          >
+                            {pos.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Puntos de Ruta de esta orden */}

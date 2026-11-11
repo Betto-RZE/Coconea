@@ -4,9 +4,11 @@ import React, { useEffect, useRef, useState } from "react";
 import { Compass, Route, Loader2 } from "lucide-react";
 import {
   PUEBLA_CENTER,
+  PUEBLA_RESTAURANT_BRANCHES,
   fetchRealOsrmRoute,
   formatCurrencyMXN,
   checkOrderRouteCompatibility,
+  KITCHEN_STAGE_LABELS,
 } from "@coconea/shared";
 import type { ActiveOrder, GeoPoint } from "@coconea/types";
 
@@ -137,7 +139,7 @@ export function PueblaDeliveryMap({
     activeRouteOrders
       .map(
         (o) =>
-          `${o.id}:${o.courierStep}:${o.customerLocation.lat.toFixed(4)},${o.customerLocation.lng.toFixed(4)}`,
+          `${o.id}:${o.kitchenStage}:${o.courierStep}:${o.customerLocation.lat.toFixed(4)},${o.customerLocation.lng.toFixed(4)}`,
       )
       .join(","),
   ].join("|");
@@ -213,6 +215,34 @@ export function PueblaDeliveryMap({
       );
     markersLayerRef.current.push(courierMarker);
 
+    // 1.B Marcadores fijos de las 5 sucursales de Restaurantes registrados en Puebla
+    const busyBranchNames = new Set<string>([
+      ...availableOrders.map((o) => o.restaurantName.toLowerCase()),
+      ...activeRouteOrders.map((o) => o.restaurantName.toLowerCase()),
+    ]);
+    for (const branch of PUEBLA_RESTAURANT_BRANCHES) {
+      if (busyBranchNames.has(branch.name.toLowerCase())) continue;
+      const branchIcon = L.divIcon({
+        className: "coconea-delivery-icon",
+        html: `<div style="background:#FFF8F5;color:#6F4E37;border:1.5px solid #C49A6C;border-radius:9999px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(61,35,20,0.18);opacity:0.92;">
+          ${branch.emoji} ${branch.name}
+        </div>`,
+        iconSize: [120, 22],
+        iconAnchor: [60, 11],
+      });
+      const branchMarker = L.marker(
+        [branch.location.lat, branch.location.lng],
+        { icon: branchIcon },
+      )
+        .addTo(map)
+        .bindPopup(
+          `<strong>${branch.emoji} Sucursal ${branch.name} (${branch.zone})</strong><br/>
+          <span style="font-size:11px">📍 ${branch.address}<br/>
+          <em>Sin pedidos pendientes en este instante</em></span>`,
+        );
+      markersLayerRef.current.push(branchMarker);
+    }
+
     // 2. Marcadores de Pedidos Disponibles en Puebla (Restaurante + Cliente solicitante)
     for (const ord of availableOrders) {
       const compat = checkOrderRouteCompatibility(
@@ -249,8 +279,9 @@ export function PueblaDeliveryMap({
         .addTo(map)
         .bindPopup(
           `<strong>Disponible #${ord.id}: ${ord.restaurantName}</strong><br/>
-          <span style="font-size:11px">Cliente: <strong>${ord.customerName}</strong><br/>
-          Platillo: ${ord.dishName}<br/>
+          <span style="font-size:11px">📍 Recoger en: ${ord.restaurantAddress}<br/>
+          Cocina: <strong>${KITCHEN_STAGE_LABELS[ord.kitchenStage]}</strong><br/>
+          Cliente: <strong>${ord.customerName}</strong> (${ord.dishName})<br/>
           Destino: ${ord.customerAddress}</span>`,
         );
 
@@ -291,13 +322,14 @@ export function PueblaDeliveryMap({
 
     // 3. Marcadores de Pedidos Aceptados en Ruta Activa (Paradas de Restaurante y Domicilio de Usuario)
     activeRouteOrders.forEach((ord, idx) => {
+      const isReadyForPickup = ord.kitchenStage === "EN_ESPERA_REPARTIDOR";
       const activeRestIcon = L.divIcon({
         className: "coconea-delivery-icon",
-        html: `<div style="background:#3D2314;color:#FFFFFF;border:2px solid #D27D2D;border-radius:9999px;padding:4px 10px;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 4px 12px rgba(61,35,20,0.4);">
-          🏪 R${idx + 1}: ${ord.restaurantName}
+        html: `<div style="background:${isReadyForPickup ? "#047857" : "#3D2314"};color:#FFFFFF;border:2px solid #D27D2D;border-radius:9999px;padding:4px 10px;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 4px 12px rgba(61,35,20,0.4);">
+          🏪 R${idx + 1}: ${ord.restaurantName} (${KITCHEN_STAGE_LABELS[ord.kitchenStage]})
         </div>`,
-        iconSize: [140, 26],
-        iconAnchor: [70, 13],
+        iconSize: [185, 26],
+        iconAnchor: [92, 13],
       });
       const rMarker = L.marker(
         [ord.restaurantLocation.lat, ord.restaurantLocation.lng],
@@ -305,7 +337,9 @@ export function PueblaDeliveryMap({
       )
         .addTo(map)
         .bindPopup(
-          `<strong>Parada Recolección R${idx + 1}: ${ord.restaurantName}</strong><br/><span style="font-size:11px">${ord.restaurantAddress}</span>`,
+          `<strong>Parada Recolección R${idx + 1}: ${ord.restaurantName}</strong><br/>
+          <span style="font-size:11px">📍 ${ord.restaurantAddress}<br/>
+          Estado en cocina: <strong>${KITCHEN_STAGE_LABELS[ord.kitchenStage]}</strong></span>`,
         );
       rMarker.on("click", () => onSelectActiveOrder(ord.id));
       markersLayerRef.current.push(rMarker);
@@ -346,9 +380,13 @@ export function PueblaDeliveryMap({
     const drawRoutes = async () => {
       setIsCalculatingRoute(true);
       try {
-        // A) Ruta activa real del repartidor (Multi-pedido)
+        // A) Ruta activa real del repartidor (Restaurante -> Dirección del Cliente en Puebla)
         if (activeRouteOrders.length > 0) {
-          const waypoints: GeoPoint[] = [courierLocation];
+          const firstOrd = activeRouteOrders[0]!;
+          const waypoints: GeoPoint[] =
+            firstOrd.courierStep === "ESPERANDO_PEDIDO"
+              ? []
+              : [courierLocation];
           for (const ord of activeRouteOrders) {
             if (
               ord.courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" ||
