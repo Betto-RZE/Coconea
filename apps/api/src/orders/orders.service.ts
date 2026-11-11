@@ -109,11 +109,18 @@ const SEED_ORDERS: ActiveOrder[] = [];
 
 @Injectable()
 export class OrdersService {
-  private readonly storePath = resolve(process.cwd(), "../../tmp/live-orders-puebla.json");
+  private readonly repoRoot = existsSync(
+    resolve(process.cwd(), "pnpm-workspace.yaml"),
+  )
+    ? process.cwd()
+    : resolve(process.cwd(), "../..");
+  private readonly storePath = resolve(
+    this.repoRoot,
+    "tmp/live-orders-puebla.json",
+  );
   private ordersCache: ActiveOrder[] | null = null;
 
   private loadOrders(): ActiveOrder[] {
-    if (this.ordersCache) return this.ordersCache;
     try {
       if (existsSync(this.storePath)) {
         const raw = readFileSync(this.storePath, "utf8");
@@ -124,8 +131,9 @@ export class OrdersService {
         }
       }
     } catch {
-      // Fallback to empty array
+      if (this.ordersCache) return this.ordersCache;
     }
+    if (this.ordersCache) return this.ordersCache;
     this.ordersCache = structuredClone(SEED_ORDERS);
     this.persistOrders(this.ordersCache);
     return this.ordersCache;
@@ -134,7 +142,7 @@ export class OrdersService {
   private persistOrders(orders: ActiveOrder[]): void {
     this.ordersCache = orders;
     try {
-      const dir = resolve(process.cwd(), "../../tmp");
+      const dir = resolve(this.repoRoot, "tmp");
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
       writeFileSync(this.storePath, JSON.stringify(orders, null, 2), "utf8");
     } catch {

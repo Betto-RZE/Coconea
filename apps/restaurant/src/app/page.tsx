@@ -313,7 +313,23 @@ export default function RestaurantPage() {
   const myRestaurantOrders = useMemo(() => {
     if (!loggedAccount) return [];
     return orders.filter(
-      (ord) => ord.restaurantId === loggedAccount.restaurantId,
+      (ord) =>
+        ord.restaurantId === loggedAccount.restaurantId ||
+        ord.restaurantName.toLowerCase() ===
+          loggedAccount.restaurant.name.toLowerCase(),
+    );
+  }, [orders, loggedAccount]);
+
+  // Pedidos activos entrantes en OTRAS sucursales (por si el usuario hizo el pedido a otro restaurante distinto al que tiene abierto)
+  const otherBranchIncomingOrders = useMemo(() => {
+    if (!loggedAccount) return [];
+    return orders.filter(
+      (ord) =>
+        ord.restaurantId !== loggedAccount.restaurantId &&
+        ord.restaurantName.toLowerCase() !==
+          loggedAccount.restaurant.name.toLowerCase() &&
+        ord.kitchenStage !== "ENTREGADO" &&
+        ord.kitchenStage !== "CANCELADO",
     );
   }, [orders, loggedAccount]);
 
@@ -738,6 +754,58 @@ export default function RestaurantPage() {
            ===================================================================== */}
         {activeTab === "cocina" && (
           <div className="space-y-6 animate-fadeIn">
+            {/* Aviso si el cliente hizo un pedido a OTRA sucursal distinta de la que está abierta actualmente */}
+            {otherBranchIncomingOrders.length > 0 && (
+              <div className="rounded-2xl border-2 border-amber-400 bg-amber-50/95 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3 text-espresso">
+                  <div className="p-2 rounded-xl bg-amber-500 text-white">
+                    <BellRing className="h-5 w-5 animate-bounce" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-extrabold">
+                      🔔 Hay {otherBranchIncomingOrders.length}{" "}
+                      {otherBranchIncomingOrders.length === 1
+                        ? "pedido activo"
+                        : "pedidos activos"}{" "}
+                      en otra sucursal:{" "}
+                      <span className="underline">
+                        {otherBranchIncomingOrders[0]!.restaurantName}
+                      </span>{" "}
+                      (#{otherBranchIncomingOrders[0]!.id} de{" "}
+                      {otherBranchIncomingOrders[0]!.customerName})
+                    </p>
+                    <p className="text-xs text-coffee-muted">
+                      Actualmente tienes abierta la consola de{" "}
+                      <strong>{activeRest.name}</strong>. Cambia a{" "}
+                      <strong>
+                        {otherBranchIncomingOrders[0]!.restaurantName}
+                      </strong>{" "}
+                      para atender ese pedido.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const targetAcc = REGISTERED_RESTAURANT_ACCOUNTS.find(
+                      (a) =>
+                        a.restaurantId ===
+                          otherBranchIncomingOrders[0]!.restaurantId ||
+                        a.restaurant.name.toLowerCase() ===
+                          otherBranchIncomingOrders[0]!.restaurantName.toLowerCase(),
+                    );
+                    if (targetAcc) handleSelectAccountLogin(targetAcc);
+                  }}
+                  className="rounded-full bg-espresso text-white px-4 py-2 text-xs font-bold hover:bg-espresso-light transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>
+                    Cambiar a {otherBranchIncomingOrders[0]!.restaurantName} ahora
+                  </span>
+                  <ArrowRight className="h-3.5 w-3.5 text-caramel" />
+                </button>
+              </div>
+            )}
+
             {/* Avisos en tiempo real */}
             {countByStage.POR_HACER > 0 && (
               <div className="rounded-2xl border-2 border-caramel bg-white px-5 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xs">

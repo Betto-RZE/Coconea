@@ -10,6 +10,10 @@ export function allowedOrigins() {
     process.env.RESTAURANT_WEB_URL || "http://localhost:3001",
     process.env.DELIVERY_WEB_URL || "http://localhost:3002",
     process.env.ADMIN_WEB_URL || "http://localhost:3003",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
+    "http://127.0.0.1:3002",
+    "http://127.0.0.1:3003",
   ];
 }
 
@@ -17,17 +21,19 @@ export function allowedOrigins() {
 export class IdentityService {
   readonly auth;
   constructor(@Inject(DatabaseService) database: DatabaseService) {
-    if (
-      !process.env.BETTER_AUTH_SECRET ||
-      process.env.BETTER_AUTH_SECRET.length < 32
-    )
+    const secret =
+      process.env.BETTER_AUTH_SECRET ||
+      (process.env.NODE_ENV === "production"
+        ? undefined
+        : "coconea_local_dev_secret_key_minimum_32_chars_2026");
+    if (!secret || secret.length < 32)
       throw new Error(
         "Configura un BETTER_AUTH_SECRET seguro de al menos 32 caracteres.",
       );
     this.auth = betterAuth({
       baseURL: process.env.BETTER_AUTH_URL || "http://localhost:4000",
       basePath: "/v1/auth",
-      secret: process.env.BETTER_AUTH_SECRET,
+      secret,
       database: drizzleAdapter(database.db, { provider: "pg", schema }),
       trustedOrigins: allowedOrigins(),
       emailAndPassword: {

@@ -5,8 +5,13 @@ import * as schema from "./schema.js";
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
+  private readonly connectionString =
+    process.env.DATABASE_URL ||
+    (process.env.NODE_ENV === "production"
+      ? undefined
+      : "postgresql://coconea:coconea_local_dev@localhost:5432/coconea_db");
   readonly pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: this.connectionString,
     max: 10,
     connectionTimeoutMillis: 5000,
   });
@@ -15,7 +20,7 @@ export class DatabaseService implements OnModuleDestroy {
     this.pool.on("error", () => {
       /* Idle clients are discarded by pg; subsequent requests reconnect. */
     });
-    if (!process.env.DATABASE_URL)
+    if (!this.connectionString)
       throw new Error("Configura DATABASE_URL antes de iniciar la API.");
   }
   async onModuleDestroy() {

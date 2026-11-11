@@ -587,9 +587,42 @@ export function buildNewActiveOrder(input: CreateOrderInput): ActiveOrder {
   };
 }
 
+async function fetchSharedBridgeOrders(): Promise<ActiveOrder[] | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const res = await fetch("/api/live-orders", {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+    });
+    if (res.ok) {
+      const payload = (await res.json()) as { data?: ActiveOrder[] };
+      if (Array.isArray(payload.data)) {
+        saveLocalOrders(payload.data);
+        return payload.data;
+      }
+    }
+  } catch {
+    // Ignore in static export mode
+  }
+  return null;
+}
+
+async function upsertSharedBridgeOrder(order: ActiveOrder): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    await fetch("/api/live-orders", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+  } catch {
+    // Ignore in static export mode
+  }
+}
+
 /**
- * Obtiene la lista de pedidos activos sincronizando con la API NestJS (/v1/orders)
- * o usando el almacenamiento local de respaldo si la API no está corriendo.
+ * Obtiene la lista de pedidos activos sincronizando con la API NestJS (/v1/orders),
+ * el puente compartido /api/live-orders (tmp/live-orders-puebla.json) o localStorage.
  */
 export async function fetchActiveOrders(
   apiUrl = DEFAULT_API_URL,
@@ -608,8 +641,14 @@ export async function fetchActiveOrders(
       }
     }
   } catch {
-    // Fallback a almacenamiento local en modo demo estática
+    // Fallback al puente compartido entre puertos (:3000, :3001, :3002)
   }
+
+  const bridgeOrders = await fetchSharedBridgeOrders();
+  if (bridgeOrders !== null) {
+    return bridgeOrders;
+  }
+
   return getLocalOrders();
 }
 
@@ -631,15 +670,17 @@ export async function createActiveOrder(
       const created = (payload.data || payload) as ActiveOrder;
       const current = getLocalOrders().filter((o) => o.id !== created.id);
       saveLocalOrders([created, ...current]);
+      await upsertSharedBridgeOrder(created);
       return created;
     }
   } catch {
-    // Fallback local
+    // Fallback al puente compartido
   }
 
   const localOrder = buildNewActiveOrder(input);
-  const current = getLocalOrders();
+  const current = (await fetchSharedBridgeOrders()) ?? getLocalOrders();
   saveLocalOrders([localOrder, ...current]);
+  await upsertSharedBridgeOrder(localOrder);
   return localOrder;
 }
 
@@ -664,13 +705,14 @@ export async function updateOrderKitchenStage(
         o.id === updated.id ? updated : o,
       );
       saveLocalOrders(list);
+      await upsertSharedBridgeOrder(updated);
       return updated;
     }
   } catch {
-    // Fallback local
+    // Fallback al puente compartido
   }
 
-  const orders = getLocalOrders();
+  const orders = (await fetchSharedBridgeOrders()) ?? getLocalOrders();
   const idx = orders.findIndex((o) => o.id === orderId);
   const existing = idx >= 0 ? orders[idx] : undefined;
   if (!existing) return null;
@@ -725,6 +767,7 @@ export async function updateOrderKitchenStage(
   ];
   orders[idx] = target;
   saveLocalOrders(orders);
+  await upsertSharedBridgeOrder(target);
   return target;
 }
 
@@ -749,13 +792,14 @@ export async function acceptOrderByCourier(
         o.id === updated.id ? updated : o,
       );
       saveLocalOrders(list);
+      await upsertSharedBridgeOrder(updated);
       return updated;
     }
   } catch {
-    // Fallback local
+    // Fallback al puente compartido
   }
 
-  const orders = getLocalOrders();
+  const orders = (await fetchSharedBridgeOrders()) ?? getLocalOrders();
   const idx = orders.findIndex((o) => o.id === orderId);
   const existing = idx >= 0 ? orders[idx] : undefined;
   if (!existing) return null;
@@ -784,6 +828,7 @@ export async function acceptOrderByCourier(
   };
   orders[idx] = target;
   saveLocalOrders(orders);
+  await upsertSharedBridgeOrder(target);
   return target;
 }
 
@@ -808,13 +853,14 @@ export async function rejectOrderByCourier(
         o.id === updated.id ? updated : o,
       );
       saveLocalOrders(list);
+      await upsertSharedBridgeOrder(updated);
       return updated;
     }
   } catch {
-    // Fallback local
+    // Fallback al puente compartido
   }
 
-  const orders = getLocalOrders();
+  const orders = (await fetchSharedBridgeOrders()) ?? getLocalOrders();
   const idx = orders.findIndex((o) => o.id === orderId);
   const existing = idx >= 0 ? orders[idx] : undefined;
   if (!existing) return null;
@@ -829,6 +875,7 @@ export async function rejectOrderByCourier(
   };
   orders[idx] = target;
   saveLocalOrders(orders);
+  await upsertSharedBridgeOrder(target);
   return target;
 }
 
@@ -858,13 +905,14 @@ export async function updateCourierTrackingStep(
         o.id === updated.id ? updated : o,
       );
       saveLocalOrders(list);
+      await upsertSharedBridgeOrder(updated);
       return updated;
     }
   } catch {
-    // Fallback local
+    // Fallback al puente compartido
   }
 
-  const orders = getLocalOrders();
+  const orders = (await fetchSharedBridgeOrders()) ?? getLocalOrders();
   const idx = orders.findIndex((o) => o.id === orderId);
   const existing = idx >= 0 ? orders[idx] : undefined;
   if (!existing) return null;
@@ -960,6 +1008,7 @@ export async function updateCourierTrackingStep(
   }
   orders[idx] = target;
   saveLocalOrders(orders);
+  await upsertSharedBridgeOrder(target);
   return target;
 }
 
@@ -989,13 +1038,14 @@ export async function sendOrderChatMessage(
         o.id === updated.id ? updated : o,
       );
       saveLocalOrders(list);
+      await upsertSharedBridgeOrder(updated);
       return updated;
     }
   } catch {
-    // Fallback local
+    // Fallback al puente compartido
   }
 
-  const orders = getLocalOrders();
+  const orders = (await fetchSharedBridgeOrders()) ?? getLocalOrders();
   const idx = orders.findIndex((o) => o.id === orderId);
   const existing = idx >= 0 ? orders[idx] : undefined;
   if (!existing) return null;
@@ -1020,5 +1070,6 @@ export async function sendOrderChatMessage(
   };
   orders[idx] = target;
   saveLocalOrders(orders);
+  await upsertSharedBridgeOrder(target);
   return target;
 }
