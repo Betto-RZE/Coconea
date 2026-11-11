@@ -32,6 +32,8 @@ La semilla crea `mcdonalds@coconea.local`, `subway@coconea.local`, `kfc@coconea.
 
 Las contraseñas nuevas se guardan únicamente en `tmp/restaurant-accounts.json`, excluido de Git. No se imprimen en los logs. El archivo permite entrar en `http://localhost:3001`. Si se ejecuta otra vez la semilla, las contraseñas existentes se conservan. No hay registro público de restaurantes. Los consumidores crean su cuenta en http://localhost:3000/register; el servidor asigna exclusivamente el rol USER, sin aceptar el rol enviado por el navegador. Las cuentas de muestra de la demo no son cuentas de la base local. Las cookies de localhost se comparten entre puertos; para usar a la vez dos identidades, abrir perfiles de navegador separados.
 
+El panel administrativo incluye una sección **Usuarios** con los correos de las cinco cuentas locales de restaurante y un enlace al inicio de sesión en `http://localhost:3001`. No muestra contraseñas; deben consultarse en el archivo local anterior. Esta lista es informativa y no permite autenticarse ni es válida para la demo estática.
+
 Better Auth guarda hashes de contraseña y sesiones en PostgreSQL. La cookie de sesión es HttpOnly; en producción se exige cookie segura y TLS. El control de frecuencia de acceso usa memoria del único proceso de API y se reinicia con él; no sustituye límites de un despliegue público.
 
 ## Autorización y consistencia
