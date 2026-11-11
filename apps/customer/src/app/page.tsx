@@ -10,6 +10,7 @@ import {
   catalogToPresentation,
   createActiveOrder,
   fetchActiveOrders,
+  sendOrderChatMessage,
   KITCHEN_STAGE_LABELS,
   COURIER_STEP_LABELS,
 } from "@coconea/shared";
@@ -44,6 +45,9 @@ import {
   X,
   Phone,
   AlertTriangle,
+  Bike,
+  MessageSquare,
+  Send,
 } from "lucide-react";
 import CustomerDashboard from "@/app/components/CustomerDashboard";
 import DietPreferencesSettings from "@/app/components/DietPreferencesSettings";
@@ -160,6 +164,8 @@ export default function CustomerHome() {
   >("pending");
   const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
   const [isConfirmingOrder, setIsConfirmingOrder] = useState<boolean>(false);
+  const [customerChatInput, setCustomerChatInput] = useState<string>("");
+  const [isSendingChat, setIsSendingChat] = useState<boolean>(false);
 
   // Plan Semanal editable
   const [weeklyPlan, setWeeklyPlan] = useState<DayPlan[]>(INITIAL_WEEKLY_PLAN);
@@ -360,6 +366,48 @@ export default function CustomerHome() {
     }
   };
 
+  // Enviar mensaje directo del cliente al repartidor durante el proceso del pedido (Punto 4)
+  const handleSendCustomerMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeOrder || !customerChatInput.trim()) return;
+    setIsSendingChat(true);
+    try {
+      const text = customerChatInput.trim();
+      setCustomerChatInput("");
+      const updated = await sendOrderChatMessage(
+        activeOrder.id,
+        "USER",
+        activeOrder.customerName,
+        text,
+        API_URL,
+      );
+      if (updated) {
+        setActiveOrder(updated);
+      }
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
+  const handleQuickCustomerMessage = async (text: string) => {
+    if (!activeOrder) return;
+    setIsSendingChat(true);
+    try {
+      const updated = await sendOrderChatMessage(
+        activeOrder.id,
+        "USER",
+        activeOrder.customerName,
+        text,
+        API_URL,
+      );
+      if (updated) {
+        setActiveOrder(updated);
+      }
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
+
   // Restaurante que se está visualizando en el directorio/drilldown
   const viewingRestaurant = useMemo(() => {
     if (!selectedRestaurantId) return null;
@@ -496,6 +544,35 @@ export default function CustomerHome() {
           <div className="rounded-2xl bg-espresso text-cream px-3.5 py-2.5 text-sm font-semibold shadow-lg border border-caramel/40 flex items-center gap-2 animate-fadeIn z-50">
             <CheckCircle2 className="h-4 w-4 text-caramel flex-shrink-0" />
             <span className="flex-1 leading-snug">{toastMessage}</span>
+          </div>
+        )}
+
+        {/* Banner de Pedido Activo en Tiempo Real (Acceso rápido a Seguimiento y Chat con Repartidor) */}
+        {activeOrder && activeTab !== "propuesta" && (
+          <div className="rounded-2xl border-2 border-caramel bg-white/95 backdrop-blur-md p-3 shadow-xs flex items-center justify-between gap-2.5 animate-fadeIn">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-espresso text-caramel">
+                <Bike className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-caramel block">
+                  Pedido #{activeOrder.id} •{" "}
+                  {KITCHEN_STAGE_LABELS[activeOrder.kitchenStage]}
+                </span>
+                <p className="text-xs font-extrabold text-espresso truncate">
+                  {activeOrder.restaurantName}:{" "}
+                  {COURIER_STEP_LABELS[activeOrder.courierStep]}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab("propuesta")}
+              className="shrink-0 rounded-full bg-espresso text-white px-3.5 py-2 text-xs font-bold hover:bg-espresso-light transition cursor-pointer flex items-center gap-1"
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-caramel" />
+              <span>Ver Ruta y Chat</span>
+            </button>
           </div>
         )}
 
@@ -1318,58 +1395,320 @@ export default function CustomerHome() {
             )}
 
             {proposalStatus === "confirmed" && (
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-3 animate-fadeIn">
-                <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
-                  <div className="flex items-center gap-1.5 text-emerald-800 text-sm font-bold">
-                    <Check className="h-4 w-4 text-emerald-600" />
-                    <span>¡Pedido Confirmado y en Curso!</span>
+              <div className="rounded-3xl bg-cream-soft border-2 border-caramel/40 p-4 space-y-4 animate-fadeIn shadow-xs">
+                <div className="flex items-center justify-between border-b border-cream-border pb-2.5">
+                  <div className="flex items-center gap-1.5 text-espresso text-sm font-extrabold">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    <span>
+                      {activeOrder?.kitchenStage === "ENTREGADO"
+                        ? "¡Tu pedido fue entregado!"
+                        : "¡Pedido Confirmado y en Seguimiento!"}
+                    </span>
                   </div>
-                  <span className="rounded-full bg-white border border-emerald-300 px-2.5 py-0.5 text-xs font-extrabold text-emerald-900">
+                  <span className="rounded-full bg-espresso text-cream px-2.5 py-0.5 text-xs font-extrabold">
                     #{activeOrder?.id || "ORD-2026-8421"}
                   </span>
                 </div>
 
-                <p className="text-sm text-emerald-800 leading-snug">
-                  La comanda de <strong>{activeOrder?.dishName || currentProposalDish.name}</strong> fue enviada a{" "}
-                  <strong>{activeOrder?.restaurantName || currentProposalRestaurant.name}</strong>.
+                <p className="text-xs text-coffee leading-snug">
+                  Tu pedido de{" "}
+                  <strong>
+                    {activeOrder?.dishName || currentProposalDish.name}
+                  </strong>{" "}
+                  fue recibido por{" "}
+                  <strong>
+                    {activeOrder?.restaurantName ||
+                      currentProposalRestaurant.name}
+                  </strong>
+                  .
                 </p>
 
                 {activeOrder && (
-                  <div className="rounded-xl bg-white border border-emerald-200 p-3 space-y-2 text-xs text-espresso">
-                    <div className="flex items-center justify-between">
-                      <span className="text-coffee-muted font-medium">Estado en Restaurante:</span>
-                      <span className="rounded-full bg-cream-container border border-cream-border px-2.5 py-0.5 font-bold text-espresso">
-                        {KITCHEN_STAGE_LABELS[activeOrder.kitchenStage]}
-                      </span>
+                  <>
+                    {/* Barra de progreso en vivo de las 5 etapas */}
+                    <div className="rounded-2xl bg-white border border-cream-border p-3 space-y-2.5 text-xs text-espresso">
+                      <div className="flex items-center justify-between">
+                        <span className="text-coffee-muted font-bold text-[11px]">
+                          Etapa en Restaurante:
+                        </span>
+                        <span className="rounded-full bg-cream-container border border-cream-border px-2.5 py-0.5 font-extrabold text-espresso text-[11px]">
+                          {KITCHEN_STAGE_LABELS[activeOrder.kitchenStage]}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-5 gap-1 pt-0.5">
+                        {(
+                          [
+                            { key: "POR_HACER", label: "Por hacer" },
+                            { key: "EN_PREPARACION", label: "Preparando" },
+                            {
+                              key: "EN_ESPERA_REPARTIDOR",
+                              label: "Listo rec.",
+                            },
+                            { key: "EN_DELIVERY", label: "En delivery" },
+                            { key: "ENTREGADO", label: "Entregado" },
+                          ] as const
+                        ).map((st, idx, arr) => {
+                          const activeIdx = arr.findIndex(
+                            (x) => x.key === activeOrder.kitchenStage,
+                          );
+                          const done = idx <= activeIdx;
+                          const current = idx === activeIdx;
+                          return (
+                            <div
+                              key={st.key}
+                              className="flex flex-col items-center gap-1"
+                            >
+                              <div
+                                className={`h-1.5 w-full rounded-full ${
+                                  current
+                                    ? "bg-caramel"
+                                    : done
+                                    ? "bg-espresso"
+                                    : "bg-cream-border"
+                                }`}
+                              />
+                              <span
+                                className={`text-[9px] text-center leading-tight ${
+                                  current
+                                    ? "font-extrabold text-caramel"
+                                    : done
+                                    ? "font-bold text-espresso"
+                                    : "text-coffee-muted"
+                                }`}
+                              >
+                                {st.label}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-cream-border">
+                        <span className="text-coffee-muted font-bold text-[11px]">
+                          Seguimiento Repartidor:
+                        </span>
+                        <span className="font-extrabold text-caramel text-right text-[11px]">
+                          {COURIER_STEP_LABELS[activeOrder.courierStep]}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-1.5 border-t border-cream-border">
+                        <span className="text-coffee-muted font-medium text-[11px]">
+                          Tu PIN de seguridad para recibir:
+                        </span>
+                        <span className="rounded-lg bg-espresso text-cream px-2.5 py-0.5 font-black tracking-widest text-xs">
+                          {activeOrder.deliveryPin}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-coffee-muted font-medium">Seguimiento de Entrega:</span>
-                      <span className="font-bold text-caramel text-right">
-                        {COURIER_STEP_LABELS[activeOrder.courierStep]}
-                      </span>
-                    </div>
-                    {activeOrder.courier && (
-                      <div className="pt-1.5 border-t border-cream-border flex items-center justify-between">
-                        <div>
-                          <span className="block font-bold text-espresso">
-                            Repartidor: {activeOrder.courier.name}
-                          </span>
-                          <span className="text-[11px] text-coffee-muted">
-                            {activeOrder.courier.vehicle} • Placas {activeOrder.courier.plates}
+
+                    {/* Ficha del Repartidor Asignado y Mapa de Ruta en Vivo */}
+                    {activeOrder.courier ? (
+                      <div className="rounded-2xl bg-white border border-cream-border p-3.5 space-y-3 text-xs">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-espresso text-white shadow-2xs">
+                              <Bike className="h-4 w-4 text-caramel" />
+                            </div>
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
+                                Tu Repartidor Asignado
+                              </span>
+                              <h4 className="font-extrabold text-espresso text-xs">
+                                {activeOrder.courier.name} ★{" "}
+                                {activeOrder.courier.rating ?? 4.9}
+                              </h4>
+                              <p className="text-[11px] text-coffee-muted">
+                                {activeOrder.courier.vehicle} • Placas{" "}
+                                <strong>{activeOrder.courier.plates}</strong>
+                              </p>
+                            </div>
+                          </div>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-cream-container border border-cream-border px-2.5 py-1 text-[10px] font-bold text-espresso">
+                            <Phone className="h-3 w-3 text-caramel" />
+                            {activeOrder.courier.phone}
                           </span>
                         </div>
-                        <span className="text-[11px] font-bold text-roasted">
-                          {activeOrder.courier.phone}
+
+                        {/* Mini-Mapa en vivo de la ruta hacia el domicilio */}
+                        <div className="relative h-32 w-full rounded-xl border border-cream-border bg-[#FAF5EE] overflow-hidden">
+                          <svg
+                            viewBox="0 0 100 100"
+                            preserveAspectRatio="none"
+                            className="absolute inset-0 h-full w-full"
+                          >
+                            <line
+                              x1="0"
+                              y1="35"
+                              x2="100"
+                              y2="35"
+                              stroke="#FFFFFF"
+                              strokeWidth="3"
+                            />
+                            <line
+                              x1="0"
+                              y1="70"
+                              x2="100"
+                              y2="70"
+                              stroke="#FFFFFF"
+                              strokeWidth="3"
+                            />
+                            <line
+                              x1="40"
+                              y1="0"
+                              x2="40"
+                              y2="100"
+                              stroke="#FFFFFF"
+                              strokeWidth="3"
+                            />
+                            <polyline
+                              points={`${activeOrder.courier.currentLocation.x},${activeOrder.courier.currentLocation.y} ${activeOrder.restaurantLocation.x},${activeOrder.restaurantLocation.y} ${activeOrder.customerLocation.x},${activeOrder.customerLocation.y}`}
+                              fill="none"
+                              stroke="#3D2314"
+                              strokeWidth="2.5"
+                              strokeDasharray="3 2"
+                            />
+                          </svg>
+
+                          {/* Pin Restaurante */}
+                          <div
+                            style={{
+                              left: `${activeOrder.restaurantLocation.x}%`,
+                              top: `${activeOrder.restaurantLocation.y}%`,
+                            }}
+                            className="-translate-x-1/2 -translate-y-1/2 absolute rounded-full bg-white border border-cream-border px-1.5 py-0.5 text-[8px] font-bold text-espresso shadow-2xs"
+                          >
+                            Restaurante
+                          </div>
+
+                          {/* Pin Domicilio */}
+                          <div
+                            style={{
+                              left: `${activeOrder.customerLocation.x}%`,
+                              top: `${activeOrder.customerLocation.y}%`,
+                            }}
+                            className="-translate-x-1/2 -translate-y-1/2 absolute rounded-full bg-emerald-700 text-white px-1.5 py-0.5 text-[8px] font-bold shadow-2xs"
+                          >
+                            Tu Domicilio
+                          </div>
+
+                          {/* Pin Repartidor */}
+                          <div
+                            style={{
+                              left: `${activeOrder.courier.currentLocation.x}%`,
+                              top: `${activeOrder.courier.currentLocation.y}%`,
+                            }}
+                            className="-translate-x-1/2 -translate-y-1/2 absolute rounded-full bg-espresso text-white border border-caramel px-2 py-0.5 text-[8px] font-extrabold shadow-md flex items-center gap-1"
+                          >
+                            <Bike className="h-2.5 w-2.5 text-caramel" />
+                            <span>{activeOrder.courier.name.split(" ")[0]}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl bg-white/80 border border-dashed border-cream-border p-3 text-xs text-coffee-muted flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Bike className="h-4 w-4 text-caramel" />
+                          Esperando que un repartidor en tu zona acepte el
+                          pedido...
+                        </span>
+                        <span className="text-[10px] font-bold text-caramel">
+                          En zona
                         </span>
                       </div>
                     )}
-                    <div className="pt-1.5 border-t border-cream-border flex items-center justify-between">
-                      <span className="text-coffee-muted font-medium">Tu PIN de seguridad:</span>
-                      <span className="rounded-lg bg-espresso text-cream px-2 py-0.5 font-black tracking-widest">
-                        {activeOrder.deliveryPin}
-                      </span>
+
+                    {/* CHAT EN TIEMPO REAL CON EL REPARTIDOR DURANTE EL PROCESO (PUNTO 4) */}
+                    <div className="rounded-2xl bg-white border border-cream-border p-3.5 space-y-3 text-xs">
+                      <div className="flex items-center justify-between border-b border-cream-border pb-2">
+                        <div className="flex items-center gap-1.5">
+                          <MessageSquare className="h-4 w-4 text-caramel" />
+                          <span className="font-extrabold text-espresso">
+                            Chat en Vivo con tu Repartidor
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-caramel bg-cream-container px-2 py-0.5 rounded-full border border-cream-border">
+                          En línea
+                        </span>
+                      </div>
+
+                      {/* Lista de mensajes sincronizados */}
+                      <div className="max-h-48 overflow-y-auto space-y-2 rounded-xl bg-cream-soft/50 border border-cream-border p-2.5 flex flex-col">
+                        {activeOrder.messages.map((msg) => {
+                          const isMe = msg.senderRole === "USER";
+                          const isSystem = msg.senderRole === "SYSTEM";
+                          return (
+                            <div
+                              key={msg.id}
+                              className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs shadow-2xs ${
+                                isMe
+                                  ? "ml-auto bg-espresso text-white"
+                                  : isSystem
+                                  ? "mx-auto bg-cream-container/90 text-coffee-muted text-[10px] text-center border border-cream-border"
+                                  : "mr-auto bg-white text-espresso border border-cream-border"
+                              }`}
+                            >
+                              <p className="text-[10px] font-bold opacity-80 mb-0.5">
+                                {isMe ? "Tú (Cliente)" : msg.senderName}
+                              </p>
+                              <p className="leading-snug">{msg.text}</p>
+                              <span className="block text-[9px] text-right opacity-70 mt-0.5">
+                                {msg.timestamp}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Mensajes rápidos para contactar al repartidor */}
+                      <div className="flex gap-1.5 overflow-x-auto pb-1">
+                        {[
+                          "¡Hola! Te espero en la entrada principal.",
+                          "Por favor toca el timbre 3B al llegar.",
+                          "¡Gracias! Ya tengo listo mi PIN 4821.",
+                        ].map((quickMsg, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            disabled={isSendingChat}
+                            onClick={() =>
+                              void handleQuickCustomerMessage(quickMsg)
+                            }
+                            className="shrink-0 rounded-full bg-cream-container hover:bg-cream-border/50 border border-cream-border px-2.5 py-1 text-[10px] font-semibold text-espresso cursor-pointer"
+                          >
+                            {quickMsg}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Input de mensaje directo al repartidor */}
+                      <form
+                        onSubmit={(e) => void handleSendCustomerMessage(e)}
+                        className="flex gap-2"
+                      >
+                        <input
+                          type="text"
+                          value={customerChatInput}
+                          onChange={(e) => setCustomerChatInput(e.target.value)}
+                          placeholder={
+                            activeOrder.courier
+                              ? `Escribe un mensaje a ${activeOrder.courier.name}...`
+                              : "Escribe indicaciones para el repartidor..."
+                          }
+                          className="flex-1 rounded-full border border-cream-border bg-cream-soft/40 px-3.5 py-2 text-xs text-espresso placeholder-coffee-muted/50 focus:outline-none focus:border-caramel"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isSendingChat || !customerChatInput.trim()}
+                          className="rounded-full bg-espresso text-white px-4 py-2 text-xs font-bold hover:bg-espresso-light disabled:opacity-50 transition cursor-pointer flex items-center gap-1"
+                        >
+                          <Send className="h-3 w-3 text-caramel" />
+                          <span>Enviar</span>
+                        </button>
+                      </form>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 <button
@@ -1378,7 +1717,7 @@ export default function CustomerHome() {
                     setProposalStatus("pending");
                     setActiveOrder(null);
                   }}
-                  className="text-sm text-emerald-800 underline font-semibold hover:text-emerald-950 block mx-auto cursor-pointer pt-1"
+                  className="text-xs text-roasted underline font-bold hover:text-espresso block mx-auto cursor-pointer pt-1"
                 >
                   Hacer otro pedido / Reiniciar simulación
                 </button>
