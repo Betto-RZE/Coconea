@@ -14,7 +14,6 @@ import {
 import {
   PUEBLA_CENTER,
   PUEBLA_QUICK_LOCATIONS,
-  PUEBLA_RESTAURANT_BRANCHES,
   geocodePueblaAddress,
   reverseGeocodePuebla,
   fetchRealOsrmRoute,
@@ -136,7 +135,6 @@ export function PueblaAddressMap({
   const mapInstanceRef = useRef<LeafletMapInstance | null>(null);
   const customerMarkerRef = useRef<LeafletMarkerInstance | null>(null);
   const restaurantMarkerRef = useRef<LeafletMarkerInstance | null>(null);
-  const otherBranchMarkersRef = useRef<LeafletMarkerInstance[]>([]);
   const courierMarkerRef = useRef<LeafletMarkerInstance | null>(null);
   const routePolylineRef = useRef<LeafletPolylineInstance | null>(null);
   const referenceRoutePolylineRef = useRef<LeafletPolylineInstance | null>(
@@ -179,7 +177,7 @@ export function PueblaAddressMap({
     }
   };
 
-  // Inicializar Leaflet y OpenStreetMap en Puebla
+  // Inicializar Leaflet con mosaicos limpios y modernos de CartoDB Voyager (sin ruido ni elementos innecesarios)
   useEffect(() => {
     let disposed = false;
     void ensureLeafletLoaded().then((L) => {
@@ -195,10 +193,14 @@ export function PueblaAddressMap({
         zoomControl: true,
       });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors · Zona Puebla",
-      }).addTo(map);
+      L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+        {
+          maxZoom: 19,
+          attribution:
+            "Tiles &copy; Esri &mdash; OpenStreetMap contributors",
+        },
+      ).addTo(map);
 
       if (mode === "picker") {
         map.on("click", (e) => {
@@ -218,7 +220,6 @@ export function PueblaAddressMap({
         mapInstanceRef.current = null;
         customerMarkerRef.current = null;
         restaurantMarkerRef.current = null;
-        otherBranchMarkersRef.current = [];
         courierMarkerRef.current = null;
         routePolylineRef.current = null;
         referenceRoutePolylineRef.current = null;
@@ -226,45 +227,24 @@ export function PueblaAddressMap({
     };
   }, [mode]);
 
-  // Actualizar marcadores y ruta real OSRM por calles de Puebla
+  // Actualizar marcadores simplificados e intuitivos (Pin de aguja, Restaurante y Repartidor)
   useEffect(() => {
     if (!leafletReady || !mapInstanceRef.current || !window.L) return;
     const L = window.L;
     const map = mapInstanceRef.current;
 
-    // 0. Marcadores secundarios de las demás sucursales registradas en Puebla
-    for (const m of otherBranchMarkersRef.current) {
-      m.remove();
-    }
-    otherBranchMarkersRef.current = [];
-    for (const branch of PUEBLA_RESTAURANT_BRANCHES) {
-      if (branch.name.toLowerCase() === restaurantName.toLowerCase()) continue;
-      const otherIcon = L.divIcon({
-        className: "coconea-map-icon",
-        html: `<div style="background:#FFF8F5;color:#6F4E37;border:1.5px solid #C49A6C;border-radius:9999px;padding:2px 7px;font-size:9px;font-weight:700;white-space:nowrap;box-shadow:0 2px 5px rgba(61,35,20,0.15);opacity:0.82;">
-          ${branch.emoji} ${branch.name}
-        </div>`,
-        iconSize: [110, 20],
-        iconAnchor: [55, 10],
-      });
-      const bMarker = L.marker([branch.location.lat, branch.location.lng], {
-        icon: otherIcon,
-      })
-        .addTo(map)
-        .bindPopup(
-          `<strong>${branch.emoji} ${branch.name} (${branch.zone})</strong><br/><span style="font-size:11px">📍 ${branch.address}</span>`,
-        );
-      otherBranchMarkersRef.current.push(bMarker);
-    }
-
-    // 1. Marcador del Restaurante Elegido en Puebla
+    // 1. Marcador del Restaurante de origen (Pin minimalista tipo burbuja con icono de cocina)
     const restIcon = L.divIcon({
-      className: "coconea-map-icon",
-      html: `<div style="background:#3D2314;color:#FFF8F5;border:2px solid #D27D2D;border-radius:9999px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 12px rgba(61,35,20,0.35);display:flex;align-items:center;gap:4px;">
-        <span>🏪 ${restaurantName}</span>
+      className: "coconea-rest-icon",
+      html: `<div style="position:relative;width:34px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;filter:drop-shadow(0 4px 6px rgba(61,35,20,0.35));">
+        <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:12px;height:4px;border-radius:9999px;background:rgba(61,35,20,0.35);filter:blur(1px);"></div>
+        <div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:2.5px;height:16px;background:#3D2314;border-radius:0 0 2px 2px;"></div>
+        <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:9999px;background:#3D2314;border:2px solid #D27D2D;box-shadow:0 3px 8px rgba(61,35,20,0.4);display:flex;align-items:center;justify-content:center;font-size:13px;color:#FFF8F5;">
+          🏪
+        </div>
       </div>`,
-      iconSize: [120, 28],
-      iconAnchor: [60, 14],
+      iconSize: [34, 44],
+      iconAnchor: [17, 42],
     });
 
     if (!restaurantMarkerRef.current) {
@@ -286,18 +266,19 @@ export function PueblaAddressMap({
       );
     }
 
-    // 2. Pin del Cliente (Figurita tipo palito con bolita arriba, sin texto; la punta inferior indica la calle exacta)
+    // 2. Pin del Cliente: Figurita limpia estilo "palito con bolita arriba", sin texto intrusivo.
+    // La punta inferior de la aguja indica la calle exacta.
     const custIcon = L.divIcon({
-      className: "coconea-map-pin-icon",
-      html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:${mode === "picker" ? "grab" : "pointer"};filter:drop-shadow(0 4px 6px rgba(46,26,15,0.38));">
-        <div style="width:24px;height:24px;border-radius:9999px;background:#047857;border:3px solid #FFF8F5;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 2px 4px rgba(0,0,0,0.22);">
-          <div style="width:8px;height:8px;border-radius:9999px;background:#FFF8F5;"></div>
+      className: "coconea-pin-icon",
+      html: `<div style="position:relative;width:32px;height:46px;display:flex;align-items:center;justify-content:center;cursor:${mode === "picker" ? "grab" : "pointer"};filter:drop-shadow(0 4px 6px rgba(46,26,15,0.35));">
+        <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:14px;height:5px;border-radius:9999px;background:rgba(46,26,15,0.32);filter:blur(1px);"></div>
+        <div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:24px;background:#3D2314;border-radius:0 0 2px 2px;"></div>
+        <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:24px;border-radius:9999px;background:linear-gradient(135deg,#10B981,#047857);border:2.5px solid #FFFFFF;box-shadow:0 3px 8px rgba(4,120,87,0.45);display:flex;align-items:center;justify-content:center;">
+          <div style="width:7px;height:7px;border-radius:9999px;background:#FFFFFF;"></div>
         </div>
-        <div style="width:3.5px;height:18px;background:#3D2314;border-radius:0 0 2px 2px;margin-top:-1px;"></div>
-        <div style="width:9px;height:4px;border-radius:9999px;background:rgba(46,26,15,0.45);margin-top:-1px;"></div>
       </div>`,
-      iconSize: [28, 44],
-      iconAnchor: [14, 42],
+      iconSize: [32, 46],
+      iconAnchor: [16, 43],
     });
 
     if (!customerMarkerRef.current) {
@@ -327,15 +308,18 @@ export function PueblaAddressMap({
       );
     }
 
-    // 3. Marcador del Repartidor (si está activo)
+    // 3. Marcador del Repartidor (Rider en vivo con halo radar sutil)
     if (courierLocation) {
       const courierIcon = L.divIcon({
-        className: "coconea-map-icon",
-        html: `<div style="background:#D27D2D;color:#FFFFFF;border:2px solid #3D2314;border-radius:9999px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 12px rgba(210,125,45,0.45);display:flex;align-items:center;gap:4px;">
-          <span>🛵 ${courierName ? courierName.split(" ")[0] : "Repartidor"}</span>
+        className: "coconea-rider-icon",
+        html: `<div style="position:relative;width:40px;height:40px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 8px rgba(61,35,20,0.35));">
+          <div style="position:absolute;width:38px;height:38px;border-radius:9999px;background:rgba(210,125,45,0.28);animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;"></div>
+          <div style="width:28px;height:28px;border-radius:9999px;background:#3D2314;border:2px solid #FFFFFF;display:flex;align-items:center;justify-content:center;font-size:14px;color:#FFFFFF;">
+            🛵
+          </div>
         </div>`,
-        iconSize: [120, 28],
-        iconAnchor: [60, 14],
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
       });
 
       if (!courierMarkerRef.current) {
@@ -361,10 +345,7 @@ export function PueblaAddressMap({
       courierMarkerRef.current = null;
     }
 
-    // 4. Trazar ruta real por calles de Puebla con OSRM:
-    // - Si el repartidor YA recibió el pedido (EN_ENTREGA / EN_DOMICILIO), el usuario ve:
-    //   a) El corredor completo Restaurante -> Domicilio en línea punteada suave (#C49A6C)
-    //   b) La ruta ACTIVA en tiempo real desde la posición del Repartidor -> Domicilio en Espresso sólido (#3D2314)
+    // 4. Trazar ruta real por calles de Puebla con OSRM (Trazo suave y limpio)
     let cancelled = false;
     const drawCustomerMapRoutes = async () => {
       if (isCourierEnRouteToCustomer && courierLocation) {
@@ -385,8 +366,8 @@ export function PueblaAddressMap({
             {
               color: "#C49A6C",
               weight: 3,
-              opacity: 0.6,
-              dashArray: "6, 6",
+              opacity: 0.55,
+              dashArray: "6, 8",
             },
           ).addTo(map);
         } else {
@@ -424,8 +405,8 @@ export function PueblaAddressMap({
         if (!routePolylineRef.current) {
           routePolylineRef.current = L.polyline(route.coordinates, {
             color: "#3D2314",
-            weight: 4,
-            opacity: 0.88,
+            weight: 4.5,
+            opacity: 0.9,
             dashArray: mode === "picker" ? "6, 6" : undefined,
           }).addTo(map);
         } else {
@@ -486,7 +467,7 @@ export function PueblaAddressMap({
         setSearchFeedback("Dirección localizada en el mapa de Puebla.");
       } else {
         setSearchFeedback(
-          "No encontramos esa calle exacta; toca cualquier punto en el mapa de Puebla para fijar tu Pin.",
+          "No encontramos esa calle exacta; toca cualquier punto en el mapa para fijar tu Pin.",
         );
       }
     } finally {
@@ -495,48 +476,48 @@ export function PueblaAddressMap({
   };
 
   return (
-    <div className="rounded-2xl border border-cream-border bg-white p-3 space-y-2.5 shadow-2xs">
+    <div className="rounded-3xl border border-cream-border/90 bg-white p-3 sm:p-4 space-y-3 shadow-xs">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <MapPin className="h-4 w-4 text-caramel shrink-0" />
           <span className="text-xs font-extrabold text-espresso">
             {mode === "picker"
-              ? "Dirección de Envío y Pin en Puebla"
+              ? "Ubicación de Entrega en Puebla"
               : isCourierEnRouteToCustomer
-                ? "Ruta en Vivo del Repartidor hacia tu Domicilio"
-                : "Mapa en Vivo y Ruta Real en Puebla"}
+                ? "Repartidor en Ruta hacia tu Domicilio"
+                : "Ruta del Pedido en Puebla"}
           </span>
         </div>
-        <span className="rounded-full bg-cream-container border border-cream-border px-2.5 py-0.5 text-[10px] font-bold text-caramel">
-          {isCourierEnRouteToCustomer ? "Restan:" : "Ruta real:"}{" "}
+        <span className="rounded-full bg-cream-container border border-cream-border px-3 py-0.5 text-[11px] font-black text-espresso">
+          {isCourierEnRouteToCustomer ? "Restan:" : "Ruta:"}{" "}
           {routeMetrics.distanceKm} km • ~{routeMetrics.durationMinutes} min
         </span>
       </div>
 
       {mode === "tracking" && (
         <div
-          className={`rounded-xl border px-2.5 py-2 text-[11px] flex items-start gap-2 ${
+          className={`rounded-2xl border px-3.5 py-2.5 text-xs flex items-center gap-2.5 ${
             isCourierEnRouteToCustomer
-              ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
-              : "bg-cream-container/60 border-cream-border text-espresso"
+              ? "bg-emerald-50/95 border-emerald-200 text-emerald-950"
+              : "bg-cream-container/70 border-cream-border text-espresso"
           }`}
         >
           {isCourierEnRouteToCustomer ? (
-            <Bike className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+            <Bike className="h-4 w-4 text-emerald-700 shrink-0" />
           ) : (
-            <Store className="h-4 w-4 text-caramel shrink-0 mt-0.5" />
+            <Store className="h-4 w-4 text-caramel shrink-0" />
           )}
-          <div className="space-y-0.5">
-            <p className="font-extrabold leading-snug">
+          <div className="min-w-0 flex-1 leading-snug">
+            <p className="font-extrabold text-[11px]">
               {isCourierEnRouteToCustomer
-                ? `🛵 ¡${courierName || "Tu repartidor"} recibió el pedido en ${restaurantName} y sigue la ruta hacia tu punto de entrega!`
+                ? `🛵 ${courierName || "Tu repartidor"} va en camino hacia tu punto de entrega.`
                 : courierLocation
-                  ? `🏪 ${courierName || "Tu repartidor"} se dirige o espera en ${restaurantName} (${restaurantAddress}) para recoger tu paquete.`
-                  : `🏪 Sucursal origen: ${restaurantName} (${restaurantAddress}) → Tu Pin de Entrega.`}
+                  ? `🏪 ${courierName || "Tu repartidor"} está en ${restaurantName} recogiendo tu pedido.`
+                  : `🏪 ${restaurantName} (${restaurantAddress})`}
             </p>
-            {courierLocation?.label && (
-              <p className="text-[10px] opacity-85 font-semibold">
-                Posición actual: {courierLocation.label}
+            {courierLocation?.label && isCourierEnRouteToCustomer && (
+              <p className="text-[10px] text-coffee-muted truncate font-medium mt-0.5">
+                {courierLocation.label}
               </p>
             )}
           </div>
@@ -558,14 +539,14 @@ export function PueblaAddressMap({
                     label: e.target.value,
                   });
                 }}
-                placeholder="Ej. Av. Juárez 1905, La Paz, Puebla..."
-                className="w-full rounded-xl border border-cream-border bg-cream-soft/50 pl-8 pr-3 py-2 text-xs font-semibold text-espresso placeholder-coffee-muted/60 focus:outline-none focus:border-caramel"
+                placeholder="Busca calle, colonia o zona en Puebla..."
+                className="w-full rounded-2xl border border-cream-border bg-cream-soft/50 pl-8 pr-3 py-2.5 text-xs font-semibold text-espresso placeholder-coffee-muted/60 focus:outline-none focus:border-caramel"
               />
             </div>
             <button
               type="submit"
               disabled={isSearching}
-              className="rounded-xl bg-espresso text-white px-3 py-2 text-xs font-bold hover:bg-espresso-light transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0"
+              className="rounded-2xl bg-espresso text-white px-3.5 py-2.5 text-xs font-bold hover:bg-espresso-light transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shrink-0"
             >
               {isSearching ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin text-caramel" />
@@ -576,73 +557,66 @@ export function PueblaAddressMap({
             </button>
           </form>
 
-          {/* Zonas rápidas de Puebla para fijar el Pin */}
-          <div className="space-y-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-coffee-muted block">
-              O elige una zona rápida en Puebla (o mueve el Pin en el mapa):
-            </span>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              {PUEBLA_QUICK_LOCATIONS.map((preset) => {
-                const presetLabel = preset.label || `${preset.lat}, ${preset.lng}`;
-                const shortZone = presetLabel.split(",")[1]?.trim() || presetLabel.split(",")[0] || "Puebla";
-                const isSelected =
-                  Math.abs(customerLocation.lat - preset.lat) < 0.0008 &&
-                  Math.abs(customerLocation.lng - preset.lng) < 0.0008;
-                return (
-                  <button
-                    key={presetLabel}
-                    type="button"
-                    onClick={() => {
-                      const pt = latLngToPueblaPoint(
-                        preset.lat,
-                        preset.lng,
-                        presetLabel,
-                      );
-                      setSearchInput(presetLabel);
-                      setSearchFeedback(`Pin movido a ${shortZone}.`);
-                      onChangeAddressAndLocation?.(presetLabel, pt);
-                    }}
-                    className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold border transition cursor-pointer ${
-                      isSelected
-                        ? "bg-espresso text-white border-espresso"
-                        : "bg-cream-container/70 text-espresso border-cream-border hover:bg-cream-container"
-                    }`}
-                  >
-                    📍 {shortZone}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Zonas rápidas limpias para fijar el Pin */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+            {PUEBLA_QUICK_LOCATIONS.map((preset) => {
+              const presetLabel = preset.label || `${preset.lat}, ${preset.lng}`;
+              const shortZone = presetLabel.split(",")[1]?.trim() || presetLabel.split(",")[0] || "Puebla";
+              const isSelected =
+                Math.abs(customerLocation.lat - preset.lat) < 0.0008 &&
+                Math.abs(customerLocation.lng - preset.lng) < 0.0008;
+              return (
+                <button
+                  key={presetLabel}
+                  type="button"
+                  onClick={() => {
+                    const pt = latLngToPueblaPoint(
+                      preset.lat,
+                      preset.lng,
+                      presetLabel,
+                    );
+                    setSearchInput(presetLabel);
+                    setSearchFeedback(`Pin fijado en ${shortZone}.`);
+                    onChangeAddressAndLocation?.(presetLabel, pt);
+                  }}
+                  className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold border transition cursor-pointer ${
+                    isSelected
+                      ? "bg-espresso text-white border-espresso shadow-2xs"
+                      : "bg-cream-container/60 text-espresso border-cream-border hover:bg-cream-container"
+                  }`}
+                >
+                  📍 {shortZone}
+                </button>
+              );
+            })}
           </div>
         </>
       )}
 
-      {/* Contenedor del Mapa Real OpenStreetMap de Puebla */}
-      <div className="relative h-56 w-full rounded-2xl border border-cream-border overflow-hidden bg-[#FAF5EE]">
+      {/* Contenedor del Mapa Simplificado y Espacioso */}
+      <div
+        className={`relative w-full rounded-2xl border border-cream-border overflow-hidden bg-[#FAF5EE] shadow-inner ${
+          mode === "picker" ? "h-72 sm:h-80" : "h-80 sm:h-96"
+        }`}
+      >
         <div ref={mapContainerRef} className="h-full w-full z-0" />
         {isReverseGeocoding && (
           <div className="absolute top-2.5 left-2.5 z-[400] rounded-full bg-espresso/90 text-cream px-3 py-1 text-[10px] font-bold flex items-center gap-1.5 shadow-md">
             <Loader2 className="h-3 w-3 animate-spin text-caramel" />
-            <span>Actualizando dirección del Pin en Puebla...</span>
+            <span>Fijando calle exacta del Pin...</span>
           </div>
         )}
-        <div className="absolute bottom-2 left-2 z-[400] rounded-xl bg-white/95 backdrop-blur-xs border border-cream-border px-2.5 py-1 text-[10px] font-bold text-espresso shadow-xs flex items-center gap-1.5">
-          <Compass className="h-3 w-3 text-caramel shrink-0" />
-          <span>
-            {mode === "picker"
-              ? "Toca el mapa o arrastra el Pin verde para elegir tu punto exacto"
-              : "Ruta real por calles de Puebla (OSRM)"}
-          </span>
-        </div>
+        {mode === "picker" && (
+          <div className="absolute bottom-2.5 left-2.5 z-[400] rounded-full bg-white/95 backdrop-blur-xs border border-cream-border px-3 py-1 text-[10px] font-bold text-espresso shadow-xs pointer-events-none">
+            Toca el mapa o arrastra el Pin verde para ajustar tu dirección
+          </div>
+        )}
       </div>
 
-      {/* Confirmación visual de coordenadas y dirección seleccionada */}
-      <div className="rounded-xl bg-cream-soft/80 border border-cream-border px-2.5 py-2 flex items-start justify-between gap-2 text-[11px]">
-        <div className="min-w-0">
-          <span className="font-bold text-caramel uppercase text-[9px] tracking-wider block">
-            Domicilio con Pin confirmado en Puebla:
-          </span>
-          <p className="font-bold text-espresso leading-snug break-words">
+      {/* Domicilio seleccionado */}
+      <div className="rounded-2xl bg-cream-soft/80 border border-cream-border px-3 py-2 flex items-center justify-between gap-2 text-xs">
+        <div className="min-w-0 flex-1">
+          <p className="font-extrabold text-espresso truncate">
             {customerAddress}
           </p>
           {searchFeedback && (

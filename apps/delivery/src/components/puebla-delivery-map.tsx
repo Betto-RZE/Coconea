@@ -155,14 +155,18 @@ export function PueblaDeliveryMap({
           courierLocation.lat || PUEBLA_CENTER.lat,
           courierLocation.lng || PUEBLA_CENTER.lng,
         ],
-        zoom: 13,
+        zoom: 14,
         zoomControl: true,
       });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors · Rutas Reales Puebla",
-      }).addTo(map);
+      L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+        {
+          maxZoom: 19,
+          attribution:
+            "Tiles &copy; Esri &mdash; OpenStreetMap contributors",
+        },
+      ).addTo(map);
 
       mapInstanceRef.current = map;
       setLeafletReady(true);
@@ -196,14 +200,17 @@ export function PueblaDeliveryMap({
       [courierLocation.lat, courierLocation.lng],
     ];
 
-    // 1. Marcador de la ubicación actual del Repartidor en Puebla
+    // 1. Marcador del Repartidor: Icono circular en vivo con halo radar sutil (sin cajotas de texto invasivas)
     const courierIcon = L.divIcon({
-      className: "coconea-delivery-icon",
-      html: `<div style="background:#3D2314;color:#FFF8F5;border:2px solid #D27D2D;border-radius:9999px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 12px rgba(61,35,20,0.45);display:flex;align-items:center;gap:4px;">
-        <span>🛵 Tú (${courierName.split(" ")[0]})</span>
+      className: "coconea-rider-icon",
+      html: `<div style="position:relative;width:42px;height:42px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 4px 8px rgba(61,35,20,0.4));">
+        <div style="position:absolute;width:40px;height:40px;border-radius:9999px;background:rgba(210,125,45,0.32);animation:pulse 2s cubic-bezier(0.4,0,0.6,1) infinite;"></div>
+        <div style="width:30px;height:30px;border-radius:9999px;background:#3D2314;border:2.5px solid #FFFFFF;box-shadow:0 2px 6px rgba(0,0,0,0.25);display:flex;align-items:center;justify-content:center;font-size:15px;color:#FFFFFF;">
+          🛵
+        </div>
       </div>`,
-      iconSize: [120, 28],
-      iconAnchor: [60, 14],
+      iconSize: [42, 42],
+      iconAnchor: [21, 21],
     });
     const courierMarker = L.marker(
       [courierLocation.lat, courierLocation.lng],
@@ -211,39 +218,11 @@ export function PueblaDeliveryMap({
     )
       .addTo(map)
       .bindPopup(
-        `<strong>Tu ubicación en Puebla</strong><br/><span style="font-size:11px">${courierLocation.label}</span>`,
+        `<strong>Tu ubicación</strong><br/><span style="font-size:11px">${courierLocation.label || "Puebla, Pue."}</span>`,
       );
     markersLayerRef.current.push(courierMarker);
 
-    // 1.B Marcadores fijos de las 5 sucursales de Restaurantes registrados en Puebla
-    const busyBranchNames = new Set<string>([
-      ...availableOrders.map((o) => o.restaurantName.toLowerCase()),
-      ...activeRouteOrders.map((o) => o.restaurantName.toLowerCase()),
-    ]);
-    for (const branch of PUEBLA_RESTAURANT_BRANCHES) {
-      if (busyBranchNames.has(branch.name.toLowerCase())) continue;
-      const branchIcon = L.divIcon({
-        className: "coconea-delivery-icon",
-        html: `<div style="background:#FFF8F5;color:#6F4E37;border:1.5px solid #C49A6C;border-radius:9999px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 2px 6px rgba(61,35,20,0.18);opacity:0.92;">
-          ${branch.emoji} ${branch.name}
-        </div>`,
-        iconSize: [120, 22],
-        iconAnchor: [60, 11],
-      });
-      const branchMarker = L.marker(
-        [branch.location.lat, branch.location.lng],
-        { icon: branchIcon },
-      )
-        .addTo(map)
-        .bindPopup(
-          `<strong>${branch.emoji} Sucursal ${branch.name} (${branch.zone})</strong><br/>
-          <span style="font-size:11px">📍 ${branch.address}<br/>
-          <em>Sin pedidos pendientes en este instante</em></span>`,
-        );
-      markersLayerRef.current.push(branchMarker);
-    }
-
-    // 2. Marcadores de Pedidos Disponibles en Puebla (Restaurante + Cliente solicitante)
+    // 2. Marcadores de Pedidos Disponibles en Puebla (Restaurante con ganancia + Cliente solicitante)
     for (const ord of availableOrders) {
       const compat = checkOrderRouteCompatibility(
         ord,
@@ -251,25 +230,21 @@ export function PueblaDeliveryMap({
         activeRouteOrders,
       );
       const isSelected = previewOrder?.id === ord.id;
-      const badgeBg = isSelected
-        ? "#D27D2D"
-        : compat.compatible
-          ? "#FFFFFF"
-          : "#E5E7EB";
-      const badgeColor = isSelected
-        ? "#FFFFFF"
-        : compat.compatible
-          ? "#3D2314"
-          : "#6B7280";
-      const borderCol = isSelected || compat.compatible ? "#D27D2D" : "#9CA3AF";
 
       const availRestIcon = L.divIcon({
-        className: "coconea-delivery-icon",
-        html: `<div style="background:${badgeBg};color:${badgeColor};border:2px solid ${borderCol};border-radius:9999px;padding:3px 9px;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 3px 10px rgba(61,35,20,0.25);cursor:pointer;">
-          🏪 ${ord.restaurantName} (+${formatCurrencyMXN(ord.courierEarnings)})
+        className: "coconea-rest-icon",
+        html: `<div style="position:relative;width:34px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;filter:drop-shadow(0 4px 6px rgba(61,35,20,0.3));">
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:12px;height:4px;border-radius:9999px;background:rgba(61,35,20,0.3);filter:blur(1px);"></div>
+          <div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:2.5px;height:16px;background:#3D2314;border-radius:0 0 2px 2px;"></div>
+          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:9999px;background:${isSelected ? "#D27D2D" : "#3D2314"};border:2px solid #FFFFFF;box-shadow:0 3px 8px rgba(61,35,20,0.35);display:flex;align-items:center;justify-content:center;font-size:13px;color:#FFF8F5;">
+            🏪
+          </div>
+          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:#D27D2D;color:#FFFFFF;border-radius:9999px;padding:1px 6px;font-size:9px;font-weight:900;white-space:nowrap;box-shadow:0 2px 5px rgba(0,0,0,0.25);">
+            +${formatCurrencyMXN(ord.courierEarnings)}
+          </div>
         </div>`,
-        iconSize: [150, 24],
-        iconAnchor: [75, 12],
+        iconSize: [34, 44],
+        iconAnchor: [17, 42],
       });
 
       const restMarker = L.marker(
@@ -294,19 +269,20 @@ export function PueblaDeliveryMap({
         ord.restaurantLocation.lng,
       ]);
 
-      // Pin del usuario que solicitó el pedido (si está previsualizado)
+      // Pin del usuario que solicitó el pedido (si está seleccionado en preview)
+      // Aguja vertical elegante: bolita arriba + palito apuntando al punto exacto, sin texto
       if (isSelected) {
         const previewCustIcon = L.divIcon({
-          className: "coconea-delivery-icon",
-          html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 4px 6px rgba(4,120,87,0.38));">
-            <div style="width:22px;height:22px;border-radius:9999px;background:#047857;border:3px solid #FFF8F5;display:flex;align-items:center;justify-content:center;">
-              <div style="width:7px;height:7px;border-radius:9999px;background:#FFF8F5;"></div>
+          className: "coconea-pin-icon",
+          html: `<div style="position:relative;width:32px;height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;filter:drop-shadow(0 4px 6px rgba(46,26,15,0.35));">
+            <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:14px;height:5px;border-radius:9999px;background:rgba(46,26,15,0.32);filter:blur(1px);"></div>
+            <div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:24px;background:#3D2314;border-radius:0 0 2px 2px;"></div>
+            <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:24px;border-radius:9999px;background:linear-gradient(135deg,#10B981,#047857);border:2.5px solid #FFFFFF;box-shadow:0 3px 8px rgba(4,120,87,0.45);display:flex;align-items:center;justify-content:center;">
+              <div style="width:7px;height:7px;border-radius:9999px;background:#FFFFFF;"></div>
             </div>
-            <div style="width:3px;height:16px;background:#3D2314;margin-top:-1px;"></div>
-            <div style="width:8px;height:3.5px;border-radius:9999px;background:rgba(46,26,15,0.45);margin-top:-1px;"></div>
           </div>`,
-          iconSize: [26, 40],
-          iconAnchor: [13, 38],
+          iconSize: [32, 46],
+          iconAnchor: [16, 43],
         });
         const custPreviewMarker = L.marker(
           [ord.customerLocation.lat, ord.customerLocation.lng],
@@ -314,7 +290,7 @@ export function PueblaDeliveryMap({
         )
           .addTo(map)
           .bindPopup(
-            `<strong>Cliente Solicitante: ${ord.customerName}</strong><br/><span style="font-size:11px">${ord.customerAddress}</span>`,
+            `<strong>Entrega: ${ord.customerName}</strong><br/><span style="font-size:11px">${ord.customerAddress}</span>`,
           );
         markersLayerRef.current.push(custPreviewMarker);
         boundsPoints.push([
@@ -324,16 +300,23 @@ export function PueblaDeliveryMap({
       }
     }
 
-    // 3. Marcadores de Pedidos Aceptados en Ruta Activa (Paradas de Restaurante y Domicilio de Usuario)
+    // 3. Marcadores de Pedidos Aceptados en Ruta Activa (Restaurante y Domicilio)
     activeRouteOrders.forEach((ord, idx) => {
       const isReadyForPickup = ord.kitchenStage === "EN_ESPERA_REPARTIDOR";
       const activeRestIcon = L.divIcon({
-        className: "coconea-delivery-icon",
-        html: `<div style="background:${isReadyForPickup ? "#047857" : "#3D2314"};color:#FFFFFF;border:2px solid #D27D2D;border-radius:9999px;padding:4px 10px;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 4px 12px rgba(61,35,20,0.4);">
-          🏪 R${idx + 1}: ${ord.restaurantName} (${KITCHEN_STAGE_LABELS[ord.kitchenStage]})
+        className: "coconea-rest-icon",
+        html: `<div style="position:relative;width:36px;height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;filter:drop-shadow(0 4px 8px rgba(61,35,20,0.38));">
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:12px;height:4px;border-radius:9999px;background:rgba(61,35,20,0.3);filter:blur(1px);"></div>
+          <div style="position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:2.5px;height:16px;background:#3D2314;border-radius:0 0 2px 2px;"></div>
+          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:30px;height:30px;border-radius:9999px;background:${isReadyForPickup ? "#047857" : "#3D2314"};border:2px solid #FFFFFF;box-shadow:0 3px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;color:#FFF8F5;">
+            🏪
+          </div>
+          <div style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:${isReadyForPickup ? "#10B981" : "#D27D2D"};color:#FFFFFF;border-radius:9999px;padding:1px 6px;font-size:9px;font-weight:900;white-space:nowrap;box-shadow:0 2px 5px rgba(0,0,0,0.25);">
+            ${isReadyForPickup ? "Listo" : `R${idx + 1}`}
+          </div>
         </div>`,
-        iconSize: [185, 26],
-        iconAnchor: [92, 13],
+        iconSize: [36, 46],
+        iconAnchor: [18, 44],
       });
       const rMarker = L.marker(
         [ord.restaurantLocation.lat, ord.restaurantLocation.lng],
@@ -341,24 +324,25 @@ export function PueblaDeliveryMap({
       )
         .addTo(map)
         .bindPopup(
-          `<strong>Parada Recolección R${idx + 1}: ${ord.restaurantName}</strong><br/>
+          `<strong>Parada Recolección: ${ord.restaurantName}</strong><br/>
           <span style="font-size:11px">📍 ${ord.restaurantAddress}<br/>
           Estado en cocina: <strong>${KITCHEN_STAGE_LABELS[ord.kitchenStage]}</strong></span>`,
         );
       rMarker.on("click", () => onSelectActiveOrder(ord.id));
       markersLayerRef.current.push(rMarker);
 
+      // Pin del Cliente en Ruta Activa: aguja con bolita arriba sin texto invasivo
       const activeCustIcon = L.divIcon({
-        className: "coconea-delivery-icon",
-        html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 4px 6px rgba(4,120,87,0.42));">
-          <div style="width:24px;height:24px;border-radius:9999px;background:#047857;border:3px solid #FFF8F5;display:flex;align-items:center;justify-content:center;">
-            <div style="width:8px;height:8px;border-radius:9999px;background:#FFF8F5;"></div>
+        className: "coconea-pin-icon",
+        html: `<div style="position:relative;width:32px;height:46px;display:flex;align-items:center;justify-content:center;cursor:pointer;filter:drop-shadow(0 4px 6px rgba(46,26,15,0.35));">
+          <div style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:14px;height:5px;border-radius:9999px;background:rgba(46,26,15,0.32);filter:blur(1px);"></div>
+          <div style="position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:3px;height:24px;background:#3D2314;border-radius:0 0 2px 2px;"></div>
+          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:24px;border-radius:9999px;background:linear-gradient(135deg,#10B981,#047857);border:2.5px solid #FFFFFF;box-shadow:0 3px 8px rgba(4,120,87,0.45);display:flex;align-items:center;justify-content:center;">
+            <div style="width:7px;height:7px;border-radius:9999px;background:#FFFFFF;"></div>
           </div>
-          <div style="width:3.5px;height:18px;background:#3D2314;margin-top:-1px;"></div>
-          <div style="width:9px;height:4px;border-radius:9999px;background:rgba(46,26,15,0.45);margin-top:-1px;"></div>
         </div>`,
-        iconSize: [28, 44],
-        iconAnchor: [14, 42],
+        iconSize: [32, 46],
+        iconAnchor: [16, 43],
       });
       const cMarker = L.marker(
         [ord.customerLocation.lat, ord.customerLocation.lng],
@@ -366,7 +350,7 @@ export function PueblaDeliveryMap({
       )
         .addTo(map)
         .bindPopup(
-          `<strong>Entrega C${idx + 1}: ${ord.customerName}</strong><br/><span style="font-size:11px">${ord.customerAddress}<br/>Platillo: ${ord.dishName}</span>`,
+          `<strong>Entrega: ${ord.customerName}</strong><br/><span style="font-size:11px">${ord.customerAddress}<br/>Platillo: ${ord.dishName}</span>`,
         );
       cMarker.on("click", () => onSelectActiveOrder(ord.id));
       markersLayerRef.current.push(cMarker);
@@ -416,7 +400,9 @@ export function PueblaDeliveryMap({
               {
                 color: "#3D2314",
                 weight: 5,
-                opacity: 0.92,
+                opacity: 0.95,
+                lineCap: "round",
+                lineJoin: "round",
               },
             ).addTo(map);
           } else {
@@ -446,8 +432,10 @@ export function PueblaDeliveryMap({
             previewPolylineRef.current = L.polyline(previewOsrm.coordinates, {
               color: "#D27D2D",
               weight: 3.5,
-              opacity: 0.85,
-              dashArray: "7, 7",
+              opacity: 0.9,
+              dashArray: "6, 8",
+              lineCap: "round",
+              lineJoin: "round",
             }).addTo(map);
           } else {
             previewPolylineRef.current.setLatLngs(previewOsrm.coordinates);
@@ -469,17 +457,17 @@ export function PueblaDeliveryMap({
   }, [leafletReady, mapStateSignature]);
 
   return (
-    <div className="relative h-[68vh] min-h-[480px] sm:h-[72vh] w-full rounded-3xl border border-cream-border bg-[#FAF5EE] overflow-hidden shadow-md">
+    <div className="relative h-[78vh] min-h-[520px] sm:h-[82vh] w-full rounded-3xl border border-cream-border bg-[#FAF5EE] overflow-hidden shadow-lg">
       <div ref={mapContainerRef} className="h-full w-full z-0" />
 
       {/* HUD Superior Flotante estilo Rappi / DiDi */}
       <div className="absolute top-3 right-3 z-[400] flex flex-col items-end gap-1.5 pointer-events-none">
-        <span className="rounded-full bg-espresso/95 text-cream px-3 py-1 text-[10px] font-extrabold shadow-md border border-caramel/40 flex items-center gap-1.5">
+        <span className="rounded-full bg-espresso/95 backdrop-blur-xs text-cream px-3 py-1 text-[10px] font-extrabold shadow-md border border-caramel/40 flex items-center gap-1.5">
           <Route className="h-3 w-3 text-caramel shrink-0" />
           <span>
             {activeRouteOrders.length > 0
               ? `En ruta (${activeRouteOrders.length})`
-              : "Mapa en Vivo · Puebla"}
+              : "Rutas Reales Puebla"}
           </span>
         </span>
         {routeSummary && (
@@ -490,18 +478,11 @@ export function PueblaDeliveryMap({
       </div>
 
       {isCalculatingRoute && (
-        <div className="absolute top-3 left-12 z-[400] rounded-full bg-espresso/90 text-cream px-3 py-1 text-[10px] font-bold flex items-center gap-1.5 shadow-md">
+        <div className="absolute top-3 left-12 z-[400] rounded-full bg-espresso/90 backdrop-blur-xs text-cream px-3 py-1 text-[10px] font-bold flex items-center gap-1.5 shadow-md">
           <Loader2 className="h-3 w-3 animate-spin text-caramel" />
           <span>Trazando ruta real...</span>
         </div>
       )}
-
-      <div className="absolute bottom-2.5 left-2.5 z-[400] rounded-xl bg-white/95 backdrop-blur-xs border border-cream-border px-2.5 py-1 text-[10px] font-bold text-espresso shadow-xs flex items-center gap-1.5 pointer-events-none">
-        <Compass className="h-3 w-3 text-caramel shrink-0" />
-        <span>
-          Puebla, Pue. (La Paz · Centro · Huexotitla · Angelópolis)
-        </span>
-      </div>
     </div>
   );
 }

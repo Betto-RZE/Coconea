@@ -797,19 +797,19 @@ export default function DeliveryDashboard() {
                 </div>
               )}
 
-              {/* Leyenda del mapa */}
+              {/* Leyenda minimalista del mapa */}
               <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-coffee-muted pt-0.5">
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-espresso border border-caramel" />
-                  Tu ubicación en Puebla
+                  Tu ubicación
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-caramel" />
                   Pedidos por aceptar
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-700" />
-                  Pin domicilio usuario
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                  Pin de entrega
                 </span>
               </div>
 
