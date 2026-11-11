@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { RestaurantCatalogPanel } from "../components/restaurant-catalog-panel";
+import dynamic from "next/dynamic";
+
+const RestaurantCatalogPanel = dynamic(
+  () =>
+    import("../components/restaurant-catalog-panel").then(
+      (mod) => mod.RestaurantCatalogPanel,
+    ),
+  { ssr: false },
+);
 import {
   ChefHat,
   Clock,
