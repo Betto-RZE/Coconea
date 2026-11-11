@@ -286,14 +286,18 @@ export function PueblaAddressMap({
       );
     }
 
-    // 2. Pin del Cliente (Arrastrable en modo picker)
+    // 2. Pin del Cliente (Figurita tipo palito con bolita arriba, sin texto; la punta inferior indica la calle exacta)
     const custIcon = L.divIcon({
-      className: "coconea-map-icon",
-      html: `<div style="background:#047857;color:#FFFFFF;border:2px solid #FFF8F5;border-radius:9999px;padding:5px 11px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 14px rgba(4,120,87,0.45);display:flex;align-items:center;gap:4px;cursor:grab;">
-        <span>📍 Tu Pin de Entrega</span>
+      className: "coconea-map-pin-icon",
+      html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:${mode === "picker" ? "grab" : "pointer"};filter:drop-shadow(0 4px 6px rgba(46,26,15,0.38));">
+        <div style="width:24px;height:24px;border-radius:9999px;background:#047857;border:3px solid #FFF8F5;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 2px 4px rgba(0,0,0,0.22);">
+          <div style="width:8px;height:8px;border-radius:9999px;background:#FFF8F5;"></div>
+        </div>
+        <div style="width:3.5px;height:18px;background:#3D2314;border-radius:0 0 2px 2px;margin-top:-1px;"></div>
+        <div style="width:9px;height:4px;border-radius:9999px;background:rgba(46,26,15,0.45);margin-top:-1px;"></div>
       </div>`,
-      iconSize: [140, 30],
-      iconAnchor: [70, 15],
+      iconSize: [28, 44],
+      iconAnchor: [14, 42],
     });
 
     if (!customerMarkerRef.current) {

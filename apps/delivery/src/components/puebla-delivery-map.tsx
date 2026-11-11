@@ -298,11 +298,15 @@ export function PueblaDeliveryMap({
       if (isSelected) {
         const previewCustIcon = L.divIcon({
           className: "coconea-delivery-icon",
-          html: `<div style="background:#047857;color:#FFFFFF;border:2px solid #FFF8F5;border-radius:9999px;padding:3px 9px;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 3px 10px rgba(4,120,87,0.35);">
-            👤 ${ord.customerName} (Solicitante)
+          html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 4px 6px rgba(4,120,87,0.38));">
+            <div style="width:22px;height:22px;border-radius:9999px;background:#047857;border:3px solid #FFF8F5;display:flex;align-items:center;justify-content:center;">
+              <div style="width:7px;height:7px;border-radius:9999px;background:#FFF8F5;"></div>
+            </div>
+            <div style="width:3px;height:16px;background:#3D2314;margin-top:-1px;"></div>
+            <div style="width:8px;height:3.5px;border-radius:9999px;background:rgba(46,26,15,0.45);margin-top:-1px;"></div>
           </div>`,
-          iconSize: [140, 24],
-          iconAnchor: [70, 12],
+          iconSize: [26, 40],
+          iconAnchor: [13, 38],
         });
         const custPreviewMarker = L.marker(
           [ord.customerLocation.lat, ord.customerLocation.lng],
@@ -346,11 +350,15 @@ export function PueblaDeliveryMap({
 
       const activeCustIcon = L.divIcon({
         className: "coconea-delivery-icon",
-        html: `<div style="background:#047857;color:#FFFFFF;border:2px solid #FFFFFF;border-radius:9999px;padding:4px 10px;font-size:10px;font-weight:900;white-space:nowrap;box-shadow:0 4px 12px rgba(4,120,87,0.45);">
-          📍 C${idx + 1}: ${ord.customerName}
+        html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 4px 6px rgba(4,120,87,0.42));">
+          <div style="width:24px;height:24px;border-radius:9999px;background:#047857;border:3px solid #FFF8F5;display:flex;align-items:center;justify-content:center;">
+            <div style="width:8px;height:8px;border-radius:9999px;background:#FFF8F5;"></div>
+          </div>
+          <div style="width:3.5px;height:18px;background:#3D2314;margin-top:-1px;"></div>
+          <div style="width:9px;height:4px;border-radius:9999px;background:rgba(46,26,15,0.45);margin-top:-1px;"></div>
         </div>`,
-        iconSize: [145, 26],
-        iconAnchor: [72, 13],
+        iconSize: [28, 44],
+        iconAnchor: [14, 42],
       });
       const cMarker = L.marker(
         [ord.customerLocation.lat, ord.customerLocation.lng],
@@ -461,37 +469,38 @@ export function PueblaDeliveryMap({
   }, [leafletReady, mapStateSignature]);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-[11px]">
-        <span className="font-bold text-coffee-muted flex items-center gap-1">
-          <Route className="h-3.5 w-3.5 text-caramel" />
+    <div className="relative h-[68vh] min-h-[480px] sm:h-[72vh] w-full rounded-3xl border border-cream-border bg-[#FAF5EE] overflow-hidden shadow-md">
+      <div ref={mapContainerRef} className="h-full w-full z-0" />
+
+      {/* HUD Superior Flotante estilo Rappi / DiDi */}
+      <div className="absolute top-3 right-3 z-[400] flex flex-col items-end gap-1.5 pointer-events-none">
+        <span className="rounded-full bg-espresso/95 text-cream px-3 py-1 text-[10px] font-extrabold shadow-md border border-caramel/40 flex items-center gap-1.5">
+          <Route className="h-3 w-3 text-caramel shrink-0" />
           <span>
             {activeRouteOrders.length > 0
-              ? "Ruta vial OSRM activa en Puebla"
-              : "Previsualización vial en Puebla"}
+              ? `En ruta (${activeRouteOrders.length})`
+              : "Mapa en Vivo · Puebla"}
           </span>
         </span>
         {routeSummary && (
-          <span className="rounded-full bg-cream-container border border-cream-border px-2.5 py-0.5 font-extrabold text-espresso text-[10px]">
-            {routeSummary.distanceKm} km en calle • ~{routeSummary.durationMinutes} min
+          <span className="rounded-full bg-white/95 backdrop-blur-xs border border-cream-border px-3 py-1 font-extrabold text-espresso text-[11px] shadow-md">
+            {routeSummary.distanceKm} km • ~{routeSummary.durationMinutes} min
           </span>
         )}
       </div>
 
-      <div className="relative h-72 w-full rounded-2xl border border-cream-border bg-[#FAF5EE] overflow-hidden shadow-inner">
-        <div ref={mapContainerRef} className="h-full w-full z-0" />
-        {isCalculatingRoute && (
-          <div className="absolute top-2.5 left-2.5 z-[400] rounded-full bg-espresso/90 text-cream px-3 py-1 text-[10px] font-bold flex items-center gap-1.5 shadow-md">
-            <Loader2 className="h-3 w-3 animate-spin text-caramel" />
-            <span>Trazando ruta real por calles de Puebla...</span>
-          </div>
-        )}
-        <div className="absolute bottom-2 left-2 z-[400] rounded-xl bg-white/95 backdrop-blur-xs border border-cream-border px-2.5 py-1 text-[10px] font-bold text-espresso shadow-xs flex items-center gap-1.5">
-          <Compass className="h-3 w-3 text-caramel shrink-0" />
-          <span>
-            Puebla, Pue. (La Paz · Centro · Huexotitla · Angelópolis)
-          </span>
+      {isCalculatingRoute && (
+        <div className="absolute top-3 left-12 z-[400] rounded-full bg-espresso/90 text-cream px-3 py-1 text-[10px] font-bold flex items-center gap-1.5 shadow-md">
+          <Loader2 className="h-3 w-3 animate-spin text-caramel" />
+          <span>Trazando ruta real...</span>
         </div>
+      )}
+
+      <div className="absolute bottom-2.5 left-2.5 z-[400] rounded-xl bg-white/95 backdrop-blur-xs border border-cream-border px-2.5 py-1 text-[10px] font-bold text-espresso shadow-xs flex items-center gap-1.5 pointer-events-none">
+        <Compass className="h-3 w-3 text-caramel shrink-0" />
+        <span>
+          Puebla, Pue. (La Paz · Centro · Huexotitla · Angelópolis)
+        </span>
       </div>
     </div>
   );

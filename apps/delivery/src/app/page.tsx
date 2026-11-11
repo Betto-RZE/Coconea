@@ -748,33 +748,9 @@ export default function DeliveryDashboard() {
            ========================================================================= */}
         {activeTab === "ruta" && (
           <div className="space-y-4 animate-fadeIn">
-            {/* MAPA INTERACTIVO REAL DE PUEBLA Y RUTA OSRM (3.a y 3.b) */}
-            <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-caramel flex items-center gap-1">
-                    <Route className="h-3.5 w-3.5" />
-                    Mapa Real de Puebla · Rutas Viales OSRM
-                  </span>
-                  <h2 className="text-sm font-extrabold text-espresso">
-                    {activeRouteOrders.length > 0
-                      ? `Ruta Activa en Puebla (${activeRouteOrders.length} ${activeRouteOrders.length === 1 ? "pedido" : "pedidos en ruta"})`
-                      : "Explora y acepta pedidos reales de usuarios en Puebla"}
-                  </h2>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => void syncOrders()}
-                  className="p-2 rounded-full bg-cream-container border border-cream-border text-espresso hover:bg-cream-border/40 transition cursor-pointer"
-                  aria-label="Sincronizar mapa"
-                >
-                  <RefreshCw
-                    className={`h-3.5 w-3.5 text-caramel ${isSyncing ? "animate-spin" : ""}`}
-                  />
-                </button>
-              </div>
-
-              {/* Mapa Interactivo Real OpenStreetMap + OSRM de Puebla */}
+            {/* MAPA INTERACTIVO REAL DE PUEBLA Y RUTA OSRM ESTILO FULL-SCREEN MOBILE (3.a y 3.b) */}
+            <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-2 sm:p-2.5 shadow-sm space-y-2">
+              {/* Mapa Interactivo Real OpenStreetMap + OSRM de Puebla ocupando toda la pantalla móvil */}
               <PueblaDeliveryMap
                 courierLocation={courierCurrentLocation}
                 courierName={profileName}
