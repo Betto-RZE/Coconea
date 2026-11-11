@@ -13,6 +13,7 @@ import {
   sendOrderChatMessage,
   KITCHEN_STAGE_LABELS,
   COURIER_STEP_LABELS,
+  RESTAURANT_LOCATIONS,
 } from "@coconea/shared";
 import {
   Calendar,
@@ -52,6 +53,7 @@ import {
 import CustomerDashboard from "@/app/components/CustomerDashboard";
 import DietPreferencesSettings from "@/app/components/DietPreferencesSettings";
 import { Navbar, CustomerTab } from "@/components/navbar";
+import { PueblaAddressMap } from "@/components/puebla-address-map";
 import { useAuth, DEMO_ACCOUNTS } from "@/context/auth-context";
 
 // =============================================================================
@@ -64,7 +66,7 @@ import {
   type DemoRestaurant as Restaurant,
 } from "@coconea/shared";
 
-import type { ActiveOrder, CatalogRestaurant } from "@coconea/types";
+import type { ActiveOrder, CatalogRestaurant, GeoPoint } from "@coconea/types";
 
 const LOCAL_CATALOG = process.env.NEXT_PUBLIC_APP_MODE === "local";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
@@ -166,6 +168,18 @@ export default function CustomerHome() {
   const [isConfirmingOrder, setIsConfirmingOrder] = useState<boolean>(false);
   const [customerChatInput, setCustomerChatInput] = useState<string>("");
   const [isSendingChat, setIsSendingChat] = useState<boolean>(false);
+
+  // Dirección real de envío y Pin en Puebla
+  const [deliveryAddress, setDeliveryAddress] = useState<string>(
+    "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
+  );
+  const [deliveryLocation, setDeliveryLocation] = useState<GeoPoint>({
+    x: 37,
+    y: 35,
+    lat: 19.0528,
+    lng: -98.2215,
+    label: "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
+  });
 
   // Plan Semanal editable
   const [weeklyPlan, setWeeklyPlan] = useState<DayPlan[]>(INITIAL_WEEKLY_PLAN);
@@ -321,6 +335,12 @@ export default function CustomerHome() {
 
   // Confirmar explícitamente la propuesta y enviar la orden al restaurante elegido
   const handleConfirmProposalOrder = async () => {
+    if (!deliveryAddress.trim()) {
+      showToast(
+        "Por favor ingresa tu dirección en Puebla o elige tu ubicación con el Pin en el mapa.",
+      );
+      return;
+    }
     setIsConfirmingOrder(true);
     try {
       const created = await createActiveOrder(
@@ -332,8 +352,12 @@ export default function CustomerHome() {
           customerId: user?.id || "usr_demo_standard_01",
           customerName: user?.fullName || "Sofía Méndez",
           customerEmail: user?.email || "sofia.mendez@coconea.local",
-          customerPhone: user?.phone || "+52 55 1234 5678",
-          customerAddress: "Calle Durango 154, Roma Norte",
+          customerPhone: user?.phone || "+52 222 123 4567",
+          customerAddress: deliveryAddress.trim(),
+          customerLocation: {
+            ...deliveryLocation,
+            label: deliveryAddress.trim(),
+          },
           dishId: currentProposalDish.id,
           dishName: currentProposalDish.name,
           dishPrice,
@@ -359,7 +383,7 @@ export default function CustomerHome() {
       setActiveOrder(created);
       setProposalStatus("confirmed");
       showToast(
-        `¡Pedido #${created.id} enviado a ${currentProposalRestaurant.name}!`,
+        `¡Pedido #${created.id} enviado a ${currentProposalRestaurant.name} en Puebla!`,
       );
     } finally {
       setIsConfirmingOrder(false);
@@ -1309,8 +1333,8 @@ export default function CustomerHome() {
                 </label>
               </div>
 
-              {/* Entrega y Horario */}
-              <div className="space-y-1.5 pt-1">
+              {/* Entrega, Horario y Selección de Dirección Real + Pin en Puebla */}
+              <div className="space-y-2.5 pt-1">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-coffee-muted flex items-center gap-1.5">
                     <Clock className="h-3.5 w-3.5 text-roasted" />
@@ -1320,15 +1344,29 @@ export default function CustomerHome() {
                     Hoy 13:30 - 14:15 hrs
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-coffee-muted flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-roasted" />
-                    Dirección guardada
-                  </span>
-                  <span className="font-semibold text-espresso truncate max-w-[190px]">
-                    Calle Durango 154, Roma Norte
-                  </span>
-                </div>
+
+                {proposalStatus === "pending" && (
+                  <PueblaAddressMap
+                    mode="picker"
+                    customerAddress={deliveryAddress}
+                    customerLocation={deliveryLocation}
+                    restaurantName={currentProposalRestaurant.name}
+                    restaurantAddress={currentProposalRestaurant.address}
+                    restaurantLocation={
+                      RESTAURANT_LOCATIONS[currentProposalRestaurant.id] || {
+                        x: 41,
+                        y: 41,
+                        lat: 19.0488,
+                        lng: -98.2165,
+                        label: currentProposalRestaurant.address,
+                      }
+                    }
+                    onChangeAddressAndLocation={(addr, loc) => {
+                      setDeliveryAddress(addr);
+                      setDeliveryLocation(loc);
+                    }}
+                  />
+                )}
               </div>
 
               {/* Desglose de Precios */}
@@ -1464,8 +1502,8 @@ export default function CustomerHome() {
                                   current
                                     ? "bg-caramel"
                                     : done
-                                    ? "bg-espresso"
-                                    : "bg-cream-border"
+                                      ? "bg-espresso"
+                                      : "bg-cream-border"
                                 }`}
                               />
                               <span
@@ -1473,8 +1511,8 @@ export default function CustomerHome() {
                                   current
                                     ? "font-extrabold text-caramel"
                                     : done
-                                    ? "font-bold text-espresso"
-                                    : "text-coffee-muted"
+                                      ? "font-bold text-espresso"
+                                      : "text-coffee-muted"
                                 }`}
                               >
                                 {st.label}
@@ -1503,7 +1541,7 @@ export default function CustomerHome() {
                       </div>
                     </div>
 
-                    {/* Ficha del Repartidor Asignado y Mapa de Ruta en Vivo */}
+                    {/* Ficha del Repartidor Asignado y Mapa Real en Vivo en Puebla */}
                     {activeOrder.courier ? (
                       <div className="rounded-2xl bg-white border border-cream-border p-3.5 space-y-3 text-xs">
                         <div className="flex items-center justify-between">
@@ -1513,7 +1551,7 @@ export default function CustomerHome() {
                             </div>
                             <div>
                               <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
-                                Tu Repartidor Asignado
+                                Tu Repartidor Asignado en Puebla
                               </span>
                               <h4 className="font-extrabold text-espresso text-xs">
                                 {activeOrder.courier.name} ★{" "}
@@ -1531,91 +1569,36 @@ export default function CustomerHome() {
                           </span>
                         </div>
 
-                        {/* Mini-Mapa en vivo de la ruta hacia el domicilio */}
-                        <div className="relative h-32 w-full rounded-xl border border-cream-border bg-[#FAF5EE] overflow-hidden">
-                          <svg
-                            viewBox="0 0 100 100"
-                            preserveAspectRatio="none"
-                            className="absolute inset-0 h-full w-full"
-                          >
-                            <line
-                              x1="0"
-                              y1="35"
-                              x2="100"
-                              y2="35"
-                              stroke="#FFFFFF"
-                              strokeWidth="3"
-                            />
-                            <line
-                              x1="0"
-                              y1="70"
-                              x2="100"
-                              y2="70"
-                              stroke="#FFFFFF"
-                              strokeWidth="3"
-                            />
-                            <line
-                              x1="40"
-                              y1="0"
-                              x2="40"
-                              y2="100"
-                              stroke="#FFFFFF"
-                              strokeWidth="3"
-                            />
-                            <polyline
-                              points={`${activeOrder.courier.currentLocation.x},${activeOrder.courier.currentLocation.y} ${activeOrder.restaurantLocation.x},${activeOrder.restaurantLocation.y} ${activeOrder.customerLocation.x},${activeOrder.customerLocation.y}`}
-                              fill="none"
-                              stroke="#3D2314"
-                              strokeWidth="2.5"
-                              strokeDasharray="3 2"
-                            />
-                          </svg>
-
-                          {/* Pin Restaurante */}
-                          <div
-                            style={{
-                              left: `${activeOrder.restaurantLocation.x}%`,
-                              top: `${activeOrder.restaurantLocation.y}%`,
-                            }}
-                            className="-translate-x-1/2 -translate-y-1/2 absolute rounded-full bg-white border border-cream-border px-1.5 py-0.5 text-[8px] font-bold text-espresso shadow-2xs"
-                          >
-                            Restaurante
-                          </div>
-
-                          {/* Pin Domicilio */}
-                          <div
-                            style={{
-                              left: `${activeOrder.customerLocation.x}%`,
-                              top: `${activeOrder.customerLocation.y}%`,
-                            }}
-                            className="-translate-x-1/2 -translate-y-1/2 absolute rounded-full bg-emerald-700 text-white px-1.5 py-0.5 text-[8px] font-bold shadow-2xs"
-                          >
-                            Tu Domicilio
-                          </div>
-
-                          {/* Pin Repartidor */}
-                          <div
-                            style={{
-                              left: `${activeOrder.courier.currentLocation.x}%`,
-                              top: `${activeOrder.courier.currentLocation.y}%`,
-                            }}
-                            className="-translate-x-1/2 -translate-y-1/2 absolute rounded-full bg-espresso text-white border border-caramel px-2 py-0.5 text-[8px] font-extrabold shadow-md flex items-center gap-1"
-                          >
-                            <Bike className="h-2.5 w-2.5 text-caramel" />
-                            <span>{activeOrder.courier.name.split(" ")[0]}</span>
-                          </div>
-                        </div>
+                        <PueblaAddressMap
+                          mode="tracking"
+                          customerAddress={activeOrder.customerAddress}
+                          customerLocation={activeOrder.customerLocation}
+                          restaurantName={activeOrder.restaurantName}
+                          restaurantAddress={activeOrder.restaurantAddress}
+                          restaurantLocation={activeOrder.restaurantLocation}
+                          courierName={activeOrder.courier.name}
+                          courierLocation={activeOrder.courier.currentLocation}
+                        />
                       </div>
                     ) : (
-                      <div className="rounded-2xl bg-white/80 border border-dashed border-cream-border p-3 text-xs text-coffee-muted flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <Bike className="h-4 w-4 text-caramel" />
-                          Esperando que un repartidor en tu zona acepte el
-                          pedido...
-                        </span>
-                        <span className="text-[10px] font-bold text-caramel">
-                          En zona
-                        </span>
+                      <div className="space-y-2.5">
+                        <div className="rounded-2xl bg-white/80 border border-dashed border-cream-border p-3 text-xs text-coffee-muted flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <Bike className="h-4 w-4 text-caramel" />
+                            Esperando que un repartidor en Puebla acepte tu pedido...
+                          </span>
+                          <span className="text-[10px] font-bold text-caramel">
+                            Zona Puebla
+                          </span>
+                        </div>
+                        <PueblaAddressMap
+                          mode="tracking"
+                          customerAddress={activeOrder.customerAddress}
+                          customerLocation={activeOrder.customerLocation}
+                          restaurantName={activeOrder.restaurantName}
+                          restaurantAddress={activeOrder.restaurantAddress}
+                          restaurantLocation={activeOrder.restaurantLocation}
+                        />
                       </div>
                     )}
 
@@ -1645,8 +1628,8 @@ export default function CustomerHome() {
                                 isMe
                                   ? "ml-auto bg-espresso text-white"
                                   : isSystem
-                                  ? "mx-auto bg-cream-container/90 text-coffee-muted text-[10px] text-center border border-cream-border"
-                                  : "mr-auto bg-white text-espresso border border-cream-border"
+                                    ? "mx-auto bg-cream-container/90 text-coffee-muted text-[10px] text-center border border-cream-border"
+                                    : "mr-auto bg-white text-espresso border border-cream-border"
                               }`}
                             >
                               <p className="text-[10px] font-bold opacity-80 mb-0.5">

@@ -13,39 +13,39 @@ import type {
 
 const RESTAURANT_LOCATIONS: Record<string, GeoPoint> = {
   "rest-raices": {
-    x: 28,
-    y: 34,
-    lat: 19.4182,
-    lng: -99.1635,
-    label: "Av. Álvaro Obregón 160, Roma Norte",
+    x: 41,
+    y: 41,
+    lat: 19.0488,
+    lng: -98.2165,
+    label: "Av. Juárez 2318,Zona Esmeralda / La Paz, Puebla, Pue.",
   },
   "rest-botanica": {
-    x: 64,
-    y: 26,
-    lat: 19.4201,
-    lng: -99.1592,
-    label: "Colima 120, Roma Norte",
+    x: 56,
+    y: 46,
+    lat: 19.0453,
+    lng: -98.1998,
+    label: "Av. Reforma 518, Centro Histórico, Puebla, Pue.",
   },
   "rest-pacifico": {
-    x: 46,
-    y: 58,
-    lat: 19.415,
-    lng: -99.161,
-    label: "Av. Insurgentes Sur 318, Roma Sur",
+    x: 61,
+    y: 55,
+    lat: 19.0398,
+    lng: -98.1945,
+    label: "Blvd. Héroes del 5 de Mayo 704, El Carmen, Puebla, Pue.",
   },
   "rest-dominos": {
-    x: 74,
-    y: 64,
-    lat: 19.4142,
-    lng: -99.1565,
-    label: "Orizaba 95, Roma Norte",
+    x: 52,
+    y: 62,
+    lat: 19.0345,
+    lng: -98.2042,
+    label: "Av. 43 Poniente 302, Huexotitla, Puebla, Pue.",
   },
   "rest-greengrass": {
-    x: 22,
-    y: 68,
-    lat: 19.4138,
-    lng: -99.1668,
-    label: "Av. Sonora 180, Hipódromo Condesa",
+    x: 29,
+    y: 69,
+    lat: 19.0298,
+    lng: -98.2305,
+    label: "Blvd. del Niño Poblano 2510, Reserva Territorial Atlixcáyotl (Angelópolis), Puebla, Pue.",
   },
 };
 
@@ -65,36 +65,44 @@ function resolveCustomerLocation(
   const email = (customerEmail || "").toLowerCase();
   if (email.includes("carlos")) {
     return {
-      x: 58,
-      y: 42,
-      lat: 19.4185,
-      lng: -99.1602,
-      label: customerAddress || "Jalapa 89, Roma Norte",
+      x: 59,
+      y: 48,
+      lat: 19.0439,
+      lng: -98.1962,
+      label: customerAddress || "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
     };
   }
   if (email.includes("valeria")) {
     return {
-      x: 18,
-      y: 50,
-      lat: 19.4162,
-      lng: -99.1685,
-      label: customerAddress || "Ámsterdam 212, Condesa",
+      x: 34,
+      y: 72,
+      lat: 19.0278,
+      lng: -98.2248,
+      label: customerAddress || "Vía Atlixcáyotl 3248, Corredor Comercial Angelópolis, Puebla, Pue.",
     };
   }
   return {
-    x: 38,
-    y: 18,
-    lat: 19.4215,
-    lng: -99.1628,
-    label: customerAddress || "Calle Durango 154, Int 3B, Roma Norte",
+    x: 37,
+    y: 35,
+    lat: 19.0528,
+    lng: -98.2215,
+    label: customerAddress || "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
   };
 }
 
 function calculateDistanceKm(a: GeoPoint, b: GeoPoint): number {
-  const dx = (a.x - b.x) * 0.042;
-  const dy = (a.y - b.y) * 0.042;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  return Math.max(0.4, Number(dist.toFixed(1)));
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h =
+    sinLat * sinLat +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLng * sinLng;
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  const roadDistance = R * c * 1.28;
+  return Math.max(0.4, Number(roadDistance.toFixed(1)));
 }
 
 const SEED_ORDERS: ActiveOrder[] = [
@@ -103,16 +111,16 @@ const SEED_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8418",
     restaurantId: "rest-raices",
     restaurantName: "McDonald's",
-    restaurantAddress: "Av. Álvaro Obregón 160, Roma Norte",
+    restaurantAddress: "Av. Juárez 2318, La Paz, Puebla, Pue.",
     restaurantLocation: RESTAURANT_LOCATIONS["rest-raices"],
     customerId: "usr_demo_standard_01",
     customerName: "Sofía Méndez",
     customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 55 1234 5678",
-    customerAddress: "Calle Durango 154, Int 3B, Roma Norte",
+    customerPhone: "+52 222 123 4567",
+    customerAddress: "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "sofia.mendez@coconea.local",
-      "Calle Durango 154, Int 3B, Roma Norte",
+      "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
     ),
     dishId: "dish-r1",
     dishName: "Big Mac",
@@ -131,7 +139,7 @@ const SEED_ORDERS: ActiveOrder[] = [
     courierEarnings: 44,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.2,
+    distanceKm: 1.1,
     estimatedWindow: "13:30 - 14:15 hrs",
     kitchenStage: "POR_HACER",
     courierStep: "SIN_ASIGNAR",
@@ -143,7 +151,7 @@ const SEED_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-081",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pedido confirmado por Sofía Méndez. Recibido en McDonald's.",
+        text: "Pedido confirmado por Sofía Méndez en Col. La Paz, Puebla. Recibido en McDonald's Av. Juárez.",
         timestamp: "12:38",
       },
     ],
@@ -156,16 +164,16 @@ const SEED_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8419",
     restaurantId: "rest-botanica",
     restaurantName: "Subway",
-    restaurantAddress: "Colima 120, Roma Norte",
+    restaurantAddress: "Av. Reforma 518, Centro Histórico, Puebla, Pue.",
     restaurantLocation: RESTAURANT_LOCATIONS["rest-botanica"],
     customerId: "usr_demo_keto_02",
     customerName: "Carlos Gómez",
     customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 55 8123 9901",
-    customerAddress: "Jalapa 89, Roma Norte",
+    customerPhone: "+52 222 812 9901",
+    customerAddress: "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "carlos.gomez@coconea.local",
-      "Jalapa 89, Roma Norte",
+      "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
     ),
     dishId: "dish-b1",
     dishName: "Pollo Estilo Teriyaki",
@@ -184,7 +192,7 @@ const SEED_ORDERS: ActiveOrder[] = [
     courierEarnings: 46,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.4,
+    distanceKm: 0.9,
     estimatedWindow: "13:30 - 14:15 hrs",
     kitchenStage: "EN_ESPERA_REPARTIDOR",
     courierStep: "SIN_ASIGNAR",
@@ -196,7 +204,7 @@ const SEED_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-082",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pedido listo en mostrador para recolección en zona Roma Norte.",
+        text: "Pedido listo en mostrador para recolección en Centro Histórico de Puebla.",
         timestamp: "12:40",
       },
     ],
@@ -209,16 +217,16 @@ const SEED_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8420",
     restaurantId: "rest-greengrass",
     restaurantName: "Green Grass",
-    restaurantAddress: "Av. Sonora 180, Hipódromo Condesa",
+    restaurantAddress: "Blvd. del Niño Poblano 2510, Angelópolis, Puebla, Pue.",
     restaurantLocation: RESTAURANT_LOCATIONS["rest-greengrass"],
     customerId: "usr_demo_vegan_03",
     customerName: "Valeria Ríos",
     customerEmail: "valeria.rios@coconea.local",
-    customerPhone: "+52 55 6741 2230",
-    customerAddress: "Ámsterdam 212, Condesa",
+    customerPhone: "+52 222 674 2230",
+    customerAddress: "Vía Atlixcáyotl 3248, Angelópolis, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "valeria.rios@coconea.local",
-      "Ámsterdam 212, Condesa",
+      "Vía Atlixcáyotl 3248, Angelópolis, Puebla, Pue.",
     ),
     dishId: "dish-g1",
     dishName: "Cesar & Bacon",
@@ -237,7 +245,7 @@ const SEED_ORDERS: ActiveOrder[] = [
     courierEarnings: 52,
     paymentMethod: "Efectivo",
     deliveryPin: "4821",
-    distanceKm: 1.6,
+    distanceKm: 1.2,
     estimatedWindow: "13:45 - 14:20 hrs",
     kitchenStage: "EN_PREPARACION",
     courierStep: "SIN_ASIGNAR",
@@ -249,7 +257,7 @@ const SEED_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-083",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Cocina preparando orden con vegetales frescos desinfectados.",
+        text: "Cocina preparando orden en sucursal Angelópolis, Puebla.",
         timestamp: "12:45",
       },
     ],
@@ -262,16 +270,16 @@ const SEED_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8422",
     restaurantId: "rest-pacifico",
     restaurantName: "KFC",
-    restaurantAddress: "Av. Insurgentes Sur 318, Roma Sur",
+    restaurantAddress: "Blvd. Héroes del 5 de Mayo 704, El Carmen, Puebla, Pue.",
     restaurantLocation: RESTAURANT_LOCATIONS["rest-pacifico"],
     customerId: "usr_demo_standard_01",
     customerName: "Sofía Méndez",
     customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 55 1234 5678",
-    customerAddress: "Calle Durango 154, Int 3B, Roma Norte",
+    customerPhone: "+52 222 123 4567",
+    customerAddress: "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "sofia.mendez@coconea.local",
-      "Calle Durango 154, Int 3B, Roma Norte",
+      "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
     ),
     dishId: "dish-p2",
     dishName: "Megabox Big Krunch",
@@ -290,7 +298,7 @@ const SEED_ORDERS: ActiveOrder[] = [
     courierEarnings: 49,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.8,
+    distanceKm: 3.4,
     estimatedWindow: "13:40 - 14:20 hrs",
     kitchenStage: "POR_HACER",
     courierStep: "SIN_ASIGNAR",
@@ -302,7 +310,7 @@ const SEED_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-084",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pedido confirmado y enviado a cocina KFC.",
+        text: "Pedido confirmado y enviado a cocina KFC Blvd. 5 de Mayo, Puebla.",
         timestamp: "12:48",
       },
     ],
@@ -315,16 +323,16 @@ const SEED_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8423",
     restaurantId: "rest-dominos",
     restaurantName: "Domino's",
-    restaurantAddress: "Orizaba 95, Roma Norte",
+    restaurantAddress: "Av. 43 Poniente 302, Huexotitla, Puebla, Pue.",
     restaurantLocation: RESTAURANT_LOCATIONS["rest-dominos"],
     customerId: "usr_demo_keto_02",
     customerName: "Carlos Gómez",
     customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 55 8123 9901",
-    customerAddress: "Jalapa 89, Roma Norte",
+    customerPhone: "+52 222 812 9901",
+    customerAddress: "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "carlos.gomez@coconea.local",
-      "Jalapa 89, Roma Norte",
+      "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
     ),
     dishId: "dish-d1",
     dishName: "Pizza de pepperoni",
@@ -343,7 +351,7 @@ const SEED_ORDERS: ActiveOrder[] = [
     courierEarnings: 48,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.3,
+    distanceKm: 1.7,
     estimatedWindow: "13:45 - 14:30 hrs",
     kitchenStage: "EN_PREPARACION",
     courierStep: "SIN_ASIGNAR",
@@ -355,7 +363,7 @@ const SEED_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-085",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pizza en horno en sucursal Domino's.",
+        text: "Pizza en horno en sucursal Domino's Huexotitla, Puebla.",
         timestamp: "12:50",
       },
     ],
@@ -367,7 +375,7 @@ const SEED_ORDERS: ActiveOrder[] = [
 
 @Injectable()
 export class OrdersService {
-  private readonly storePath = resolve(process.cwd(), "../../tmp/active-orders.json");
+  private readonly storePath = resolve(process.cwd(), "../../tmp/active-orders-puebla.json");
   private ordersCache: ActiveOrder[] | null = null;
 
   private loadOrders(): ActiveOrder[] {
@@ -429,16 +437,21 @@ export class OrdersService {
       minute: "2-digit",
     });
     const restLoc = RESTAURANT_LOCATIONS[input.restaurantId] || {
-      x: 34,
-      y: 38,
-      lat: 19.418,
-      lng: -99.163,
+      x: 50,
+      y: 50,
+      lat: 19.0436,
+      lng: -98.2062,
       label: input.restaurantAddress,
     };
-    const custLoc = resolveCustomerLocation(
-      input.customerEmail,
-      input.customerAddress,
-    );
+    const custLoc = input.customerLocation
+      ? {
+          ...input.customerLocation,
+          label: input.customerAddress || input.customerLocation.label,
+        }
+      : resolveCustomerLocation(
+          input.customerEmail,
+          input.customerAddress,
+        );
     const distanceKm = calculateDistanceKm(restLoc, custLoc);
     const subtotal = Number(input.dishPrice) + Number(input.beveragePrice || 0);
     const orderId = `ORD-2026-${Math.floor(100 + Math.random() * 899)}`;

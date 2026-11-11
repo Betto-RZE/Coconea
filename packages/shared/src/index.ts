@@ -101,6 +101,12 @@ export type { DemoMenuItem, DemoRestaurant } from "./demo-catalog";
 export { catalogToPresentation } from "./catalog-adapter";
 export { catalogRequest, CatalogApiError } from "./catalog-client";
 export {
+  PUEBLA_CENTER,
+  PUEBLA_QUICK_LOCATIONS,
+  latLngToPueblaPoint,
+  geocodePueblaAddress,
+  reverseGeocodePuebla,
+  fetchRealOsrmRoute,
   RESTAURANT_LOCATIONS,
   DEFAULT_COURIER_LOCATION,
   DEFAULT_COURIER_PROFILE,
@@ -119,3 +125,4 @@ export {
   updateCourierTrackingStep,
   sendOrderChatMessage,
 } from "./order-workflow-client";
+export type { GeocodeResult, OsrmRouteResult } from "./order-workflow-client";

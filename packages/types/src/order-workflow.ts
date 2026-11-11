@@ -98,6 +98,7 @@ export interface CreateOrderInput {
   customerEmail: string;
   customerPhone?: string;
   customerAddress: string;
+  customerLocation?: GeoPoint;
   dishId: string;
   dishName: string;
   dishPrice: number;

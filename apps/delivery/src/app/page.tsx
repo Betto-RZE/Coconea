@@ -47,6 +47,7 @@ import type {
   CourierTrackingStep,
   GeoPoint,
 } from "@coconea/types";
+import { PueblaDeliveryMap } from "@/components/puebla-delivery-map";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 
@@ -634,18 +635,18 @@ export default function DeliveryDashboard() {
            ========================================================================= */}
         {activeTab === "ruta" && (
           <div className="space-y-4 animate-fadeIn">
-            {/* MAPA INTERACTIVO DE ZONA Y RUTA (3.a y 3.b) */}
+            {/* MAPA INTERACTIVO REAL DE PUEBLA Y RUTA OSRM (3.a y 3.b) */}
             <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-4 shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase tracking-wider text-caramel flex items-center gap-1">
                     <Route className="h-3.5 w-3.5" />
-                    Mapa de Zona Roma · Condesa · Del Valle
+                    Mapa Real de Puebla · Rutas Viales OSRM
                   </span>
                   <h2 className="text-sm font-extrabold text-espresso">
                     {activeRouteOrders.length > 0
-                      ? `Ruta Activa (${activeRouteOrders.length} ${activeRouteOrders.length === 1 ? "pedido" : "pedidos en ruta"})`
-                      : "Explora y acepta pedidos cercanos en el mapa"}
+                      ? `Ruta Activa en Puebla (${activeRouteOrders.length} ${activeRouteOrders.length === 1 ? "pedido" : "pedidos en ruta"})`
+                      : "Explora y acepta pedidos reales de usuarios en Puebla"}
                   </h2>
                 </div>
                 <button
@@ -660,280 +661,66 @@ export default function DeliveryDashboard() {
                 </button>
               </div>
 
-              {/* Lienzo de Mapa Interactivo SVG + Pin Overlay */}
-              <div className="relative h-64 w-full rounded-2xl border border-cream-border bg-[#FAF5EE] overflow-hidden shadow-inner">
-                {/* Cuadrícula de calles y avenidas en SVG */}
-                <svg
-                  viewBox="0 0 100 100"
-                  preserveAspectRatio="none"
-                  className="absolute inset-0 h-full w-full"
-                >
-                  {/* Bloques y parques orgánicos */}
-                  <rect
-                    x="8"
-                    y="10"
-                    width="24"
-                    height="18"
-                    rx="3"
-                    fill="#EFE6D8"
-                  />
-                  <rect
-                    x="38"
-                    y="8"
-                    width="28"
-                    height="20"
-                    rx="3"
-                    fill="#EFE6D8"
-                  />
-                  <rect
-                    x="72"
-                    y="12"
-                    width="20"
-                    height="24"
-                    rx="3"
-                    fill="#EFE6D8"
-                  />
-                  {/* Parque México / España */}
-                  <rect
-                    x="10"
-                    y="36"
-                    width="22"
-                    height="26"
-                    rx="6"
-                    fill="#E2ECD9"
-                  />
-                  <rect
-                    x="40"
-                    y="34"
-                    width="26"
-                    height="24"
-                    rx="3"
-                    fill="#EFE6D8"
-                  />
-                  <rect
-                    x="72"
-                    y="42"
-                    width="22"
-                    height="22"
-                    rx="3"
-                    fill="#EFE6D8"
-                  />
-                  <rect
-                    x="14"
-                    y="70"
-                    width="30"
-                    height="22"
-                    rx="3"
-                    fill="#EFE6D8"
-                  />
-                  <rect
-                    x="50"
-                    y="66"
-                    width="38"
-                    height="24"
-                    rx="3"
-                    fill="#EFE6D8"
-                  />
+              {/* Mapa Interactivo Real OpenStreetMap + OSRM de Puebla */}
+              <PueblaDeliveryMap
+                courierLocation={courierCurrentLocation}
+                courierName={profileName}
+                availableOrders={availableZoneOrders}
+                activeRouteOrders={activeRouteOrders}
+                previewOrder={mapPreviewOrder}
+                onSelectPreviewOrder={(orderId) =>
+                  setSelectedMapPreviewOrderId(orderId)
+                }
+                onSelectActiveOrder={(orderId) =>
+                  setSelectedActiveOrderId(orderId)
+                }
+              />
 
-                  {/* Avenidas principales */}
-                  <line
-                    x1="0"
-                    y1="31"
-                    x2="100"
-                    y2="31"
-                    stroke="#FFFFFF"
-                    strokeWidth="3.2"
-                  />
-                  <line
-                    x1="0"
-                    y1="64"
-                    x2="100"
-                    y2="64"
-                    stroke="#FFFFFF"
-                    strokeWidth="3.2"
-                  />
-                  <line
-                    x1="35"
-                    y1="0"
-                    x2="35"
-                    y2="100"
-                    stroke="#FFFFFF"
-                    strokeWidth="3.2"
-                  />
-                  <line
-                    x1="69"
-                    y1="0"
-                    x2="69"
-                    y2="100"
-                    stroke="#FFFFFF"
-                    strokeWidth="3"
-                  />
-                  {/* Diagonal Av. Insurgentes */}
-                  <line
-                    x1="15"
-                    y1="0"
-                    x2="85"
-                    y2="100"
-                    stroke="#FFFDFB"
-                    strokeWidth="2.5"
-                    strokeDasharray="2 1"
-                  />
-
-                  {/* Radio de compatibilidad del repartidor */}
-                  <circle
-                    cx={courierCurrentLocation.x}
-                    cy={courierCurrentLocation.y}
-                    r="28"
-                    fill="rgba(210, 125, 45, 0.08)"
-                    stroke="#D27D2D"
-                    strokeWidth="0.6"
-                    strokeDasharray="2 2"
-                  />
-
-                  {/* Línea punteada de previsualización para pedido disponible seleccionado */}
-                  {mapPreviewOrder && (
-                    <polyline
-                      points={`${courierCurrentLocation.x},${courierCurrentLocation.y} ${mapPreviewOrder.restaurantLocation.x},${mapPreviewOrder.restaurantLocation.y} ${mapPreviewOrder.customerLocation.x},${mapPreviewOrder.customerLocation.y}`}
-                      fill="none"
-                      stroke="#D27D2D"
-                      strokeWidth="1.2"
-                      strokeDasharray="2.5 2"
-                      opacity="0.75"
-                    />
-                  )}
-
-                  {/* RUTA ACTIVA TRAZADA EN EL MAPA (3.b: Repartidor -> Restaurante(s) -> Domicilio(s)) */}
-                  {activeRouteOrders.length > 0 && (
-                    <>
-                      <polyline
-                        points={svgPolylinePoints}
-                        fill="none"
-                        stroke="#3D2314"
-                        strokeWidth="2.6"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <polyline
-                        points={svgPolylinePoints}
-                        fill="none"
-                        stroke="#D27D2D"
-                        strokeWidth="1.2"
-                        strokeDasharray="3 2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </>
-                  )}
-                </svg>
-
-                {/* Etiquetas de colonias en el mapa */}
-                <span className="absolute top-2 left-2.5 text-[9px] font-extrabold uppercase tracking-wider text-coffee-muted/80 bg-white/80 px-2 py-0.5 rounded-full border border-cream-border">
-                  Roma Norte
-                </span>
-                <span className="absolute top-2 right-2.5 text-[9px] font-extrabold uppercase tracking-wider text-coffee-muted/80 bg-white/80 px-2 py-0.5 rounded-full border border-cream-border">
-                  Del Valle
-                </span>
-                <span className="absolute bottom-2 left-2.5 text-[9px] font-extrabold uppercase tracking-wider text-emerald-800/80 bg-white/80 px-2 py-0.5 rounded-full border border-cream-border">
-                  Condesa
-                </span>
-
-                {/* ICONOS DE PEDIDOS DISPONIBLES EN EL MAPA (3.a) */}
-                {availableZoneOrders.map((ord) => {
-                  const compat = checkOrderRouteCompatibility(
-                    ord,
-                    courierCurrentLocation,
-                    activeRouteOrders,
-                  );
-                  const isPreviewed = mapPreviewOrder?.id === ord.id;
-                  return (
-                    <button
-                      key={`avail-${ord.id}`}
-                      type="button"
-                      onClick={() => setSelectedMapPreviewOrderId(ord.id)}
-                      style={{
-                        left: `${ord.restaurantLocation.x}%`,
-                        top: `${ord.restaurantLocation.y}%`,
-                      }}
-                      className={`-translate-x-1/2 -translate-y-1/2 absolute z-10 flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-extrabold shadow-md border transition transform hover:scale-110 cursor-pointer ${
-                        isPreviewed
-                          ? "bg-caramel text-white border-white ring-2 ring-caramel"
-                          : compat.compatible
-                          ? "bg-white text-espresso border-caramel"
-                          : "bg-gray-100 text-gray-500 border-gray-300"
-                      }`}
-                      title={`Disponible: ${ord.restaurantName} (+${formatCurrencyMXN(ord.courierEarnings)})`}
-                    >
-                      <Store className="h-3 w-3 shrink-0" />
-                      <span>+{formatCurrencyMXN(ord.courierEarnings)}</span>
-                    </button>
-                  );
-                })}
-
-                {/* MARCADORES DE LOS PEDIDOS ACEPTADOS EN LA RUTA ACTIVA (3.b) */}
-                {activeRouteOrders.map((ord, idx) => (
-                  <React.Fragment key={`active-markers-${ord.id}`}>
-                    {/* Marcador de Restaurante de recolección */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedActiveOrderId(ord.id)}
-                      style={{
-                        left: `${ord.restaurantLocation.x}%`,
-                        top: `${ord.restaurantLocation.y}%`,
-                      }}
-                      className="-translate-x-1/2 -translate-y-1/2 absolute z-20 flex items-center gap-1 rounded-full bg-espresso text-white px-2 py-1 text-[9px] font-extrabold shadow-md border border-white cursor-pointer"
-                      title={`Recoger #${idx + 1}: ${ord.restaurantName}`}
-                    >
-                      <Store className="h-3 w-3 text-caramel" />
-                      <span>R{idx + 1}</span>
-                    </button>
-
-                    {/* Marcador del Domicilio del Cliente */}
-                    <button
-                      type="button"
-                      onClick={() => setSelectedActiveOrderId(ord.id)}
-                      style={{
-                        left: `${ord.customerLocation.x}%`,
-                        top: `${ord.customerLocation.y}%`,
-                      }}
-                      className="-translate-x-1/2 -translate-y-1/2 absolute z-20 flex items-center gap-1 rounded-full bg-emerald-700 text-white px-2 py-1 text-[9px] font-extrabold shadow-md border border-white cursor-pointer"
-                      title={`Domicilio #${idx + 1}: ${ord.customerName} (${ord.customerAddress})`}
-                    >
-                      <Home className="h-3 w-3" />
-                      <span>C{idx + 1}</span>
-                    </button>
-                  </React.Fragment>
-                ))}
-
-                {/* MARCADOR DE LA UBICACIÓN ACTUAL DEL REPARTIDOR */}
-                <div
-                  style={{
-                    left: `${courierCurrentLocation.x}%`,
-                    top: `${courierCurrentLocation.y}%`,
-                  }}
-                  className="-translate-x-1/2 -translate-y-1/2 absolute z-30 flex flex-col items-center pointer-events-none"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-espresso text-white border-2 border-caramel shadow-lg animate-pulse">
-                    <Bike className="h-4 w-4 text-caramel" />
-                  </div>
-                  <span className="mt-0.5 rounded-full bg-espresso text-white px-1.5 py-0.2 text-[8px] font-extrabold shadow-xs whitespace-nowrap">
-                    Tú (Repartidor)
+              {/* Selector rápido de pedidos disponibles solicitados por usuarios en Puebla */}
+              {availableZoneOrders.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-coffee-muted block">
+                    Pedidos solicitados por usuarios en Puebla ({availableZoneOrders.length}):
                   </span>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+                    {availableZoneOrders.map((ord) => {
+                      const isPreviewed = mapPreviewOrder?.id === ord.id;
+                      return (
+                        <button
+                          key={ord.id}
+                          type="button"
+                          onClick={() => setSelectedMapPreviewOrderId(ord.id)}
+                          className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold border transition cursor-pointer flex items-center gap-1.5 ${
+                            isPreviewed
+                              ? "bg-caramel text-white border-caramel shadow-2xs"
+                              : "bg-cream-container/80 text-espresso border-cream-border hover:bg-cream-container"
+                          }`}
+                        >
+                          <Store className="h-3 w-3 shrink-0" />
+                          <span>
+                            {ord.restaurantName} → {ord.customerName.split(" ")[0]} (+
+                            {formatCurrencyMXN(ord.courierEarnings)})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Leyenda del mapa */}
               <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-coffee-muted pt-0.5">
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-espresso border border-caramel" />
-                  Tu ubicación
+                  Tu ubicación en Puebla
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-caramel" />
-                  Pedidos para aceptar
+                  Pedidos por aceptar
                 </span>
                 <span className="flex items-center gap-1">
                   <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-700" />
-                  Domicilio cliente
+                  Pin domicilio usuario
                 </span>
               </div>
 
@@ -950,7 +737,7 @@ export default function DeliveryDashboard() {
                       <>
                         <div className="flex items-center justify-between">
                           <span className="text-[10px] font-extrabold uppercase tracking-wider text-caramel">
-                            Pedido seleccionado en el mapa • #{mapPreviewOrder.id}
+                            Pedido seleccionado en Puebla • #{mapPreviewOrder.id}
                           </span>
                           <span
                             className={`rounded-full px-2 py-0.5 text-[9px] font-extrabold ${
@@ -962,18 +749,22 @@ export default function DeliveryDashboard() {
                             {compat.reason}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
                             <p className="font-extrabold text-espresso">
                               {mapPreviewOrder.restaurantName} →{" "}
                               {mapPreviewOrder.customerName}
                             </p>
                             <p className="text-[11px] text-coffee-muted">
                               {mapPreviewOrder.dishName} •{" "}
-                              {mapPreviewOrder.distanceKm} km
+                              {mapPreviewOrder.distanceKm} km •{" "}
+                              {KITCHEN_STAGE_LABELS[mapPreviewOrder.kitchenStage]}
+                            </p>
+                            <p className="text-[10px] text-espresso font-semibold truncate">
+                              📍 Domicilio usuario: {mapPreviewOrder.customerAddress}
                             </p>
                           </div>
-                          <span className="text-sm font-black text-espresso">
+                          <span className="text-sm font-black text-espresso shrink-0">
                             +{formatCurrencyMXN(mapPreviewOrder.courierEarnings)}
                           </span>
                         </div>
@@ -985,7 +776,7 @@ export default function DeliveryDashboard() {
                             className="flex-1 rounded-full bg-espresso py-2 px-3 text-[11px] font-bold text-white hover:bg-espresso-light disabled:opacity-50 transition cursor-pointer"
                           >
                             {activeRouteOrders.length > 0
-                              ? "+ Sumar a mi Ruta (En Ruta)"
+                              ? "+ Sumar a mi Ruta en Puebla"
                               : "Aceptar este Pedido del Mapa"}
                           </button>
                           <button

@@ -9,55 +9,103 @@ import type {
 } from "@coconea/types";
 
 const DEFAULT_API_URL = "http://localhost:4000/v1";
-const LOCAL_STORAGE_ORDERS_KEY = "coconea_active_orders_v1";
+const LOCAL_STORAGE_ORDERS_KEY = "coconea_active_orders_puebla_v2";
 
-export const DEFAULT_COURIER_LOCATION: GeoPoint = {
-  x: 48,
-  y: 44,
-  lat: 19.417,
-  lng: -99.1615,
-  label: "Plaza Río de Janeiro, Roma Norte",
+export const PUEBLA_CENTER = {
+  lat: 19.0414,
+  lng: -98.2063,
+  label: "Paseo Bravo / Av. Juárez, Puebla, Pue.",
 };
 
-const RAICES_LOCATION: GeoPoint = {
-  x: 28,
-  y: 34,
-  lat: 19.4182,
-  lng: -99.1635,
-  label: "Av. Álvaro Obregón 160, Roma Norte",
-};
+/**
+ * Convierte coordenadas reales (lat, lng) de la zona metropolitana de Puebla
+ * a coordenadas relativas X, Y (0..100) de respaldo.
+ */
+export function latLngToPueblaPoint(
+  lat: number,
+  lng: number,
+  label?: string,
+): GeoPoint {
+  // Bounding box aproximado de Puebla (lat: 18.99 a 19.08, lng: -98.26 a -98.17)
+  const x = Math.min(94, Math.max(6, Math.round(((lng - -98.255) / 0.085) * 100)));
+  const y = Math.min(94, Math.max(6, Math.round(((19.068 - lat) / 0.062) * 100)));
+  return {
+    x,
+    y,
+    lat: Number(lat.toFixed(6)),
+    lng: Number(lng.toFixed(6)),
+    label,
+  };
+}
 
-const BOTANICA_LOCATION: GeoPoint = {
-  x: 64,
-  y: 26,
-  lat: 19.4201,
-  lng: -99.1592,
-  label: "Colima 120, Roma Norte",
-};
+export const PUEBLA_QUICK_LOCATIONS: GeoPoint[] = [
+  latLngToPueblaPoint(
+    19.0512,
+    -98.2215,
+    "Av. Teziutlán Sur 45, Col. La Paz, 72160 Puebla, Pue.",
+  ),
+  latLngToPueblaPoint(
+    19.0433,
+    -98.1984,
+    "Av. Reforma 118, Centro Histórico, 72000 Puebla, Pue.",
+  ),
+  latLngToPueblaPoint(
+    19.0315,
+    -98.2305,
+    "Vía Atlixcáyotl 1504, Zona Angelópolis, 72190 Puebla, Pue.",
+  ),
+  latLngToPueblaPoint(
+    19.0294,
+    -98.2078,
+    "Av. 43 Poniente 305, Huexotitla, 72534 Puebla, Pue.",
+  ),
+  latLngToPueblaPoint(
+    19.0468,
+    -98.2092,
+    "Av. Juárez 1914, Zona Esmeralda, 72090 Puebla, Pue.",
+  ),
+  latLngToPueblaPoint(
+    19.0018,
+    -98.2012,
+    "Av. San Claudio y 14 Sur, CU BUAP, 72570 Puebla, Pue.",
+  ),
+];
 
-const PACIFICO_LOCATION: GeoPoint = {
-  x: 46,
-  y: 58,
-  lat: 19.415,
-  lng: -99.161,
-  label: "Av. Insurgentes Sur 318, Roma Sur",
-};
+export const DEFAULT_COURIER_LOCATION: GeoPoint = latLngToPueblaPoint(
+  19.0438,
+  -98.2062,
+  "Av. Juárez y 13 Sur, Centro, Puebla, Pue.",
+);
 
-const DOMINOS_LOCATION: GeoPoint = {
-  x: 74,
-  y: 64,
-  lat: 19.4142,
-  lng: -99.1565,
-  label: "Orizaba 95, Roma Norte",
-};
+const RAICES_LOCATION: GeoPoint = latLngToPueblaPoint(
+  19.0461,
+  -98.2128,
+  "Av. Juárez 2318, Col. La Paz, Puebla, Pue.",
+);
 
-const GREENGRASS_LOCATION: GeoPoint = {
-  x: 22,
-  y: 68,
-  lat: 19.4138,
-  lng: -99.1668,
-  label: "Av. Sonora 180, Hipódromo Condesa",
-};
+const BOTANICA_LOCATION: GeoPoint = latLngToPueblaPoint(
+  19.0433,
+  -98.1980,
+  "Av. Reforma 125, Centro Histórico, Puebla, Pue.",
+);
+
+const PACIFICO_LOCATION: GeoPoint = latLngToPueblaPoint(
+  19.0355,
+  -98.2025,
+  "Blvd. Héroes del 5 de Mayo 3108, Ladrillera de Benítez, Puebla, Pue.",
+);
+
+const DOMINOS_LOCATION: GeoPoint = latLngToPueblaPoint(
+  19.0298,
+  -98.2095,
+  "Calle 43 Pte. 115, Huexotitla, Puebla, Pue.",
+);
+
+const GREENGRASS_LOCATION: GeoPoint = latLngToPueblaPoint(
+  19.0312,
+  -98.2320,
+  "Blvd. del Niño Poblano 2510, Angelópolis, Puebla, Pue.",
+);
 
 export const RESTAURANT_LOCATIONS: Record<string, GeoPoint> = {
   "rest-raices": RAICES_LOCATION,
@@ -70,9 +118,9 @@ export const RESTAURANT_LOCATIONS: Record<string, GeoPoint> = {
 export const DEFAULT_COURIER_PROFILE: CourierInfo = {
   id: "courier_rodrigo_01",
   name: "Rodrigo Herrera",
-  phone: "+52 55 4321 5678",
+  phone: "+52 222 432 5678",
   vehicle: "Bicicleta Eléctrica",
-  plates: "MX-928-REV",
+  plates: "PUE-928-MX",
   rating: 4.9,
   currentLocation: DEFAULT_COURIER_LOCATION,
 };
@@ -83,37 +131,193 @@ export function resolveCustomerLocation(
 ): GeoPoint {
   const email = (customerEmail || "").toLowerCase();
   if (email.includes("carlos")) {
-    return {
-      x: 58,
-      y: 42,
-      lat: 19.4185,
-      lng: -99.1602,
-      label: customerAddress || "Jalapa 89, Roma Norte",
-    };
+    return latLngToPueblaPoint(
+      19.0378,
+      -98.2145,
+      customerAddress || "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
+    );
   }
   if (email.includes("valeria")) {
-    return {
-      x: 18,
-      y: 50,
-      lat: 19.4162,
-      lng: -99.1685,
-      label: customerAddress || "Ámsterdam 212, Condesa",
-    };
+    return latLngToPueblaPoint(
+      19.0389,
+      -98.2008,
+      customerAddress || "Calle 3 Sur 1508, El Carmen, Puebla, Pue.",
+    );
   }
-  return {
-    x: 38,
-    y: 18,
-    lat: 19.4215,
-    lng: -99.1628,
-    label: customerAddress || "Calle Durango 154, Int 3B, Roma Norte",
-  };
+  return latLngToPueblaPoint(
+    19.0512,
+    -98.2215,
+    customerAddress || "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
+  );
 }
 
+/**
+ * Calcula la distancia real en kilómetros usando la fórmula de Haversine sobre (lat, lng).
+ */
 export function calculateDistanceKm(a: GeoPoint, b: GeoPoint): number {
-  const dx = (a.x - b.x) * 0.042;
-  const dy = (a.y - b.y) * 0.042;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  return Math.max(0.4, Number(dist.toFixed(1)));
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const R = 6371; // Radio de la Tierra en km
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+  const h =
+    sinDLat * sinDLat +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinDLng * sinDLng;
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  const roadFactor = 1.25; // Factor urbano por calles
+  return Math.max(0.4, Number((R * c * roadFactor).toFixed(1)));
+}
+
+export interface GeocodeResult {
+  lat: number;
+  lng: number;
+  displayName: string;
+}
+
+/**
+ * Busca direcciones reales en Puebla, Pue. usando Nominatim (OpenStreetMap, 100% gratuito, $0 MXN).
+ */
+export async function geocodePueblaAddress(
+  query: string,
+): Promise<GeocodeResult[]> {
+  const clean = query.trim();
+  if (!clean) return [];
+  const searchQuery = clean.toLowerCase().includes("puebla")
+    ? clean
+    : `${clean}, Puebla, México`;
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=mx&viewbox=-98.35,19.14,-98.08,18.94&bounded=0&q=${encodeURIComponent(
+      searchQuery,
+    )}`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "Accept-Language": "es" },
+    });
+    if (res.ok) {
+      const data = (await res.json()) as Array<{
+        lat: string;
+        lon: string;
+        display_name: string;
+      }>;
+      if (Array.isArray(data) && data.length > 0) {
+        return data.map((item) => ({
+          lat: Number(item.lat),
+          lng: Number(item.lon),
+          displayName: item.display_name,
+        }));
+      }
+    }
+  } catch {
+    // Fallback local si no hay conexión a internet
+  }
+  return PUEBLA_QUICK_LOCATIONS.filter((loc) =>
+    (loc.label || "").toLowerCase().includes(clean.toLowerCase()),
+  ).map((loc) => ({
+    lat: loc.lat,
+    lng: loc.lng,
+    displayName: loc.label || `${loc.lat}, ${loc.lng}`,
+  }));
+}
+
+/**
+ * Obtiene el nombre real de la calle y colonia en Puebla al soltar o tocar un Pin en el mapa (Nominatim Reverse).
+ */
+export async function reverseGeocodePuebla(
+  lat: number,
+  lng: number,
+): Promise<string> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "Accept-Language": "es" },
+    });
+    if (res.ok) {
+      const data = (await res.json()) as {
+        display_name?: string;
+        address?: {
+          road?: string;
+          house_number?: string;
+          suburb?: string;
+          neighbourhood?: string;
+          city?: string;
+          town?: string;
+          postcode?: string;
+        };
+      };
+      if (data.address?.road) {
+        const num = data.address.house_number
+          ? ` ${data.address.house_number}`
+          : "";
+        const col =
+          data.address.suburb || data.address.neighbourhood
+            ? `, Col. ${data.address.suburb || data.address.neighbourhood}`
+            : "";
+        return `${data.address.road}${num}${col}, Puebla, Pue.`;
+      }
+      if (data.display_name) {
+        return data.display_name.split(",").slice(0, 4).join(", ");
+      }
+    }
+  } catch {
+    // Fallback con coordenadas
+  }
+  return `Ubicación seleccionada en Puebla (${lat.toFixed(4)}, ${lng.toFixed(4)})`;
+}
+
+export interface OsrmRouteResult {
+  coordinates: [number, number][]; // [lat, lng][] para dibujar en Leaflet
+  distanceKm: number;
+  durationMin: number;
+}
+
+/**
+ * Calcula la ruta real calle por calle en Puebla usando OSRM (Open Source Routing Machine, $0 MXN).
+ */
+export async function fetchRealOsrmRoute(
+  waypoints: { lat: number; lng: number }[],
+): Promise<OsrmRouteResult> {
+  if (waypoints.length < 2) {
+    return {
+      coordinates: waypoints.map((w) => [w.lat, w.lng]),
+      distanceKm: 0,
+      durationMin: 0,
+    };
+  }
+  try {
+    const coordsString = waypoints
+      .map((w) => `${w.lng.toFixed(6)},${w.lat.toFixed(6)}`)
+      .join(";");
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = (await res.json()) as {
+        routes?: Array<{
+          distance: number;
+          duration: number;
+          geometry?: { coordinates: [number, number][] };
+        }>;
+      };
+      const firstRoute = data.routes?.[0];
+      if (firstRoute?.geometry?.coordinates?.length) {
+        return {
+          // GeoJSON usa [lng, lat], Leaflet usa [lat, lng]
+          coordinates: firstRoute.geometry.coordinates.map(([lng, lat]) => [
+            lat,
+            lng,
+          ]),
+          distanceKm: Number((firstRoute.distance / 1000).toFixed(1)),
+          durationMin: Math.max(3, Math.round(firstRoute.duration / 60)),
+        };
+      }
+    }
+  } catch {
+    // Fallback a línea directa entre puntos si no hay red
+  }
+  return {
+    coordinates: waypoints.map((w) => [w.lat, w.lng]),
+    distanceKm: 1.8,
+    durationMin: 12,
+  };
 }
 
 /**
@@ -197,16 +401,16 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8418",
     restaurantId: "rest-raices",
     restaurantName: "McDonald's",
-    restaurantAddress: "Av. Álvaro Obregón 160, Roma Norte",
+    restaurantAddress: "Av. Juárez 2318, Col. La Paz, Puebla, Pue.",
     restaurantLocation: RAICES_LOCATION,
     customerId: "usr_demo_standard_01",
     customerName: "Sofía Méndez",
     customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 55 1234 5678",
-    customerAddress: "Calle Durango 154, Int 3B, Roma Norte",
+    customerPhone: "+52 222 123 5678",
+    customerAddress: "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "sofia.mendez@coconea.local",
-      "Calle Durango 154, Int 3B, Roma Norte",
+      "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
     ),
     dishId: "dish-r1",
     dishName: "Big Mac",
@@ -225,7 +429,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     courierEarnings: 44,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.2,
+    distanceKm: 1.3,
     estimatedWindow: "13:30 - 14:15 hrs",
     kitchenStage: "POR_HACER",
     courierStep: "SIN_ASIGNAR",
@@ -237,7 +441,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-081",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pedido confirmado por Sofía Méndez. Recibido en McDonald's.",
+        text: "Pedido confirmado por Sofía Méndez en Puebla (Col. La Paz). Recibido en McDonald's Av. Juárez.",
         timestamp: "12:38",
       },
     ],
@@ -250,16 +454,16 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8419",
     restaurantId: "rest-botanica",
     restaurantName: "Subway",
-    restaurantAddress: "Colima 120, Roma Norte",
+    restaurantAddress: "Av. Reforma 125, Centro Histórico, Puebla, Pue.",
     restaurantLocation: BOTANICA_LOCATION,
     customerId: "usr_demo_keto_02",
     customerName: "Carlos Gómez",
     customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 55 8123 9901",
-    customerAddress: "Jalapa 89, Roma Norte",
+    customerPhone: "+52 222 812 9901",
+    customerAddress: "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "carlos.gomez@coconea.local",
-      "Jalapa 89, Roma Norte",
+      "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
     ),
     dishId: "dish-b1",
     dishName: "Pollo Estilo Teriyaki",
@@ -278,7 +482,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     courierEarnings: 46,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.4,
+    distanceKm: 1.9,
     estimatedWindow: "13:30 - 14:15 hrs",
     kitchenStage: "EN_ESPERA_REPARTIDOR",
     courierStep: "SIN_ASIGNAR",
@@ -290,7 +494,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-082",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pedido listo en mostrador para recolección en zona Roma Norte.",
+        text: "Pedido listo en mostrador para recolección en Subway Centro Histórico, Puebla.",
         timestamp: "12:40",
       },
     ],
@@ -303,16 +507,16 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8420",
     restaurantId: "rest-greengrass",
     restaurantName: "Green Grass",
-    restaurantAddress: "Av. Sonora 180, Hipódromo Condesa",
+    restaurantAddress: "Blvd. del Niño Poblano 2510, Angelópolis, Puebla, Pue.",
     restaurantLocation: GREENGRASS_LOCATION,
     customerId: "usr_demo_vegan_03",
     customerName: "Valeria Ríos",
     customerEmail: "valeria.rios@coconea.local",
-    customerPhone: "+52 55 6741 2230",
-    customerAddress: "Ámsterdam 212, Condesa",
+    customerPhone: "+52 222 674 2230",
+    customerAddress: "Calle 3 Sur 1508, El Carmen, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "valeria.rios@coconea.local",
-      "Ámsterdam 212, Condesa",
+      "Calle 3 Sur 1508, El Carmen, Puebla, Pue.",
     ),
     dishId: "dish-g1",
     dishName: "Cesar & Bacon",
@@ -331,7 +535,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     courierEarnings: 52,
     paymentMethod: "Efectivo",
     deliveryPin: "4821",
-    distanceKm: 1.6,
+    distanceKm: 2.4,
     estimatedWindow: "13:45 - 14:20 hrs",
     kitchenStage: "EN_PREPARACION",
     courierStep: "SIN_ASIGNAR",
@@ -343,7 +547,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-083",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Cocina preparando orden con vegetales frescos desinfectados.",
+        text: "Cocina preparando orden en Green Grass Angelópolis, Puebla.",
         timestamp: "12:45",
       },
     ],
@@ -356,16 +560,17 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8422",
     restaurantId: "rest-pacifico",
     restaurantName: "KFC",
-    restaurantAddress: "Av. Insurgentes Sur 318, Roma Sur",
+    restaurantAddress:
+      "Blvd. Héroes del 5 de Mayo 3108, Ladrillera de Benítez, Puebla, Pue.",
     restaurantLocation: PACIFICO_LOCATION,
     customerId: "usr_demo_standard_01",
     customerName: "Sofía Méndez",
     customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 55 1234 5678",
-    customerAddress: "Calle Durango 154, Int 3B, Roma Norte",
+    customerPhone: "+52 222 123 5678",
+    customerAddress: "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "sofia.mendez@coconea.local",
-      "Calle Durango 154, Int 3B, Roma Norte",
+      "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
     ),
     dishId: "dish-p2",
     dishName: "Megabox Big Krunch",
@@ -384,7 +589,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     courierEarnings: 49,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.8,
+    distanceKm: 2.2,
     estimatedWindow: "13:40 - 14:20 hrs",
     kitchenStage: "POR_HACER",
     courierStep: "SIN_ASIGNAR",
@@ -396,7 +601,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-084",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pedido confirmado y enviado a cocina KFC.",
+        text: "Pedido confirmado y enviado a cocina KFC Blvd. 5 de Mayo, Puebla.",
         timestamp: "12:48",
       },
     ],
@@ -409,16 +614,16 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     proposalCode: "PROP-8423",
     restaurantId: "rest-dominos",
     restaurantName: "Domino's",
-    restaurantAddress: "Orizaba 95, Roma Norte",
+    restaurantAddress: "Calle 43 Pte. 115, Huexotitla, Puebla, Pue.",
     restaurantLocation: DOMINOS_LOCATION,
     customerId: "usr_demo_keto_02",
     customerName: "Carlos Gómez",
     customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 55 8123 9901",
-    customerAddress: "Jalapa 89, Roma Norte",
+    customerPhone: "+52 222 812 9901",
+    customerAddress: "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
     customerLocation: resolveCustomerLocation(
       "carlos.gomez@coconea.local",
-      "Jalapa 89, Roma Norte",
+      "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
     ),
     dishId: "dish-d1",
     dishName: "Pizza de pepperoni",
@@ -437,7 +642,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
     courierEarnings: 48,
     paymentMethod: "Tarjeta",
     deliveryPin: "4821",
-    distanceKm: 1.3,
+    distanceKm: 1.2,
     estimatedWindow: "13:45 - 14:30 hrs",
     kitchenStage: "EN_PREPARACION",
     courierStep: "SIN_ASIGNAR",
@@ -449,7 +654,7 @@ export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
         orderId: "ORD-2026-085",
         senderRole: "SYSTEM",
         senderName: "Sistema Coconea",
-        text: "Pizza en horno en sucursal Domino's.",
+        text: "Pizza en horno en sucursal Domino's Huexotitla, Puebla.",
         timestamp: "12:50",
       },
     ],
@@ -495,17 +700,16 @@ export function buildNewActiveOrder(input: CreateOrderInput): ActiveOrder {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const restLoc = RESTAURANT_LOCATIONS[input.restaurantId] || {
-    x: 34,
-    y: 38,
-    lat: 19.418,
-    lng: -99.163,
-    label: input.restaurantAddress,
-  };
-  const custLoc = resolveCustomerLocation(
-    input.customerEmail,
-    input.customerAddress,
-  );
+  const restLoc =
+    RESTAURANT_LOCATIONS[input.restaurantId] ||
+    latLngToPueblaPoint(19.0461, -98.2128, input.restaurantAddress);
+  const custLoc = input.customerLocation
+    ? latLngToPueblaPoint(
+        input.customerLocation.lat,
+        input.customerLocation.lng,
+        input.customerLocation.label || input.customerAddress,
+      )
+    : resolveCustomerLocation(input.customerEmail, input.customerAddress);
   const distanceKm = calculateDistanceKm(restLoc, custLoc);
   const subtotal = input.dishPrice + (input.beveragePrice || 0);
   const orderId = `ORD-2026-${Math.floor(100 + Math.random() * 899)}`;
