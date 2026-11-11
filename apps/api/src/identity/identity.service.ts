@@ -8,6 +8,8 @@ export function allowedOrigins() {
   return [
     process.env.CUSTOMER_WEB_URL || "http://localhost:3000",
     process.env.RESTAURANT_WEB_URL || "http://localhost:3001",
+    process.env.DELIVERY_WEB_URL || "http://localhost:3002",
+    process.env.ADMIN_WEB_URL || "http://localhost:3003",
   ];
 }
 

@@ -100,3 +100,22 @@ export { DEMO_RESTAURANTS } from "./demo-catalog";
 export type { DemoMenuItem, DemoRestaurant } from "./demo-catalog";
 export { catalogToPresentation } from "./catalog-adapter";
 export { catalogRequest, CatalogApiError } from "./catalog-client";
+export {
+  RESTAURANT_LOCATIONS,
+  DEFAULT_COURIER_LOCATION,
+  DEFAULT_COURIER_PROFILE,
+  KITCHEN_STAGE_LABELS,
+  COURIER_STEP_LABELS,
+  INITIAL_DEMO_ORDERS,
+  resolveCustomerLocation,
+  calculateDistanceKm,
+  checkOrderRouteCompatibility,
+  buildNewActiveOrder,
+  fetchActiveOrders,
+  createActiveOrder,
+  updateOrderKitchenStage,
+  acceptOrderByCourier,
+  rejectOrderByCourier,
+  updateCourierTrackingStep,
+  sendOrderChatMessage,
+} from "./order-workflow-client";

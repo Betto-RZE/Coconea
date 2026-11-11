@@ -12,6 +12,20 @@ export type {
   IngredientDeclaration,
 } from "./catalog";
 
+export type {
+  KitchenOrderStage,
+  CourierTrackingStep,
+  GeoPoint,
+  CourierInfo,
+  OrderChatMessage,
+  ActiveOrder,
+  CreateOrderInput,
+  UpdateOrderKitchenStageInput,
+  AcceptOrderByCourierInput,
+  UpdateCourierStepInput,
+  SendOrderMessageInput,
+} from "./order-workflow";
+
 // Roles y Actores
 export type UserRole = "USER" | "RESTAURANT" | "DELIVERY" | "ADMIN";
 export type ActorRole = UserRole | "SYSTEM";

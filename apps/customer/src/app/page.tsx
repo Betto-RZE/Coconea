@@ -8,6 +8,10 @@ import {
   formatCurrencyMXN,
   catalogRequest,
   catalogToPresentation,
+  createActiveOrder,
+  fetchActiveOrders,
+  KITCHEN_STAGE_LABELS,
+  COURIER_STEP_LABELS,
 } from "@coconea/shared";
 import {
   Calendar,
@@ -56,7 +60,7 @@ import {
   type DemoRestaurant as Restaurant,
 } from "@coconea/shared";
 
-import type { CatalogRestaurant } from "@coconea/types";
+import type { ActiveOrder, CatalogRestaurant } from "@coconea/types";
 
 const LOCAL_CATALOG = process.env.NEXT_PUBLIC_APP_MODE === "local";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
@@ -154,6 +158,8 @@ export default function CustomerHome() {
   const [proposalStatus, setProposalStatus] = useState<
     "pending" | "confirmed" | "rejected"
   >("pending");
+  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
+  const [isConfirmingOrder, setIsConfirmingOrder] = useState<boolean>(false);
 
   // Plan Semanal editable
   const [weeklyPlan, setWeeklyPlan] = useState<DayPlan[]>(INITIAL_WEEKLY_PLAN);
@@ -271,6 +277,88 @@ export default function CustomerHome() {
   const ethicalServiceFee = 15.0; // Tarifa ética de plataforma
   const proposalTotal =
     dishPrice + beveragePrice + deliveryFee + ethicalServiceFee;
+
+  // Sincronización en vivo del pedido activo del cliente con Restaurante y Repartidor
+  useEffect(() => {
+    let disposed = false;
+    const syncOrder = async () => {
+      try {
+        const orders = await fetchActiveOrders(API_URL);
+        if (disposed) return;
+        if (activeOrder) {
+          const updated = orders.find((o) => o.id === activeOrder.id);
+          if (updated) setActiveOrder(updated);
+        } else if (user) {
+          const myLatest = orders.find(
+            (o) =>
+              o.customerEmail.toLowerCase() === user.email.toLowerCase() &&
+              o.kitchenStage !== "CANCELADO",
+          );
+          if (myLatest) {
+            setActiveOrder(myLatest);
+            setProposalStatus("confirmed");
+          }
+        }
+      } catch {
+        // Ignore transient sync errors
+      }
+    };
+    void syncOrder();
+    const timer = window.setInterval(syncOrder, 2500);
+    window.addEventListener("focus", syncOrder);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", syncOrder);
+    };
+  }, [activeOrder?.id, user?.email]);
+
+  // Confirmar explícitamente la propuesta y enviar la orden al restaurante elegido
+  const handleConfirmProposalOrder = async () => {
+    setIsConfirmingOrder(true);
+    try {
+      const created = await createActiveOrder(
+        {
+          proposalCode: "PROP-8421",
+          restaurantId: currentProposalRestaurant.id,
+          restaurantName: currentProposalRestaurant.name,
+          restaurantAddress: currentProposalRestaurant.address,
+          customerId: user?.id || "usr_demo_standard_01",
+          customerName: user?.fullName || "Sofía Méndez",
+          customerEmail: user?.email || "sofia.mendez@coconea.local",
+          customerPhone: user?.phone || "+52 55 1234 5678",
+          customerAddress: "Calle Durango 154, Roma Norte",
+          dishId: currentProposalDish.id,
+          dishName: currentProposalDish.name,
+          dishPrice,
+          beverageId: currentProposalBeverage?.id || null,
+          beverageName: currentProposalBeverage?.name || null,
+          beveragePrice,
+          compostableCutlery,
+          allergens: user?.allergies?.length
+            ? user.allergies
+            : currentProposalDish.safeBadges,
+          dietaryNotes: user?.dietaryPreferences?.length
+            ? user.dietaryPreferences
+            : ["Plan Equilibrado"],
+          caloriesText: `${currentProposalDish.calories ?? 550} kcal • ${currentProposalDish.protein ?? 36}g Prot`,
+          deliveryFee,
+          serviceFee: ethicalServiceFee,
+          total: proposalTotal,
+          paymentMethod: "Tarjeta",
+          estimatedWindow: "Hoy 13:30 - 14:15 hrs",
+        },
+        API_URL,
+      );
+      setActiveOrder(created);
+      setProposalStatus("confirmed");
+      showToast(
+        `¡Pedido #${created.id} enviado a ${currentProposalRestaurant.name}!`,
+      );
+    } finally {
+      setIsConfirmingOrder(false);
+    }
+  };
 
   // Restaurante que se está visualizando en el directorio/drilldown
   const viewingRestaurant = useMemo(() => {
@@ -1203,24 +1291,15 @@ export default function CustomerHome() {
                 <button
                   id="btn-confirm-proposal"
                   type="button"
-                  onClick={() => {
-                    if (LOCAL_CATALOG) {
-                      showToast(
-                        "Los pedidos reales todavía no están habilitados. El catálogo sí está conectado.",
-                      );
-                      return;
-                    }
-                    setProposalStatus("confirmed");
-                    showToast(
-                      `¡Comida confirmada con ${currentProposalRestaurant.name}!`,
-                    );
-                  }}
-                  className="w-full flex items-center justify-center gap-2 rounded-full bg-espresso py-3.5 text-sm font-bold text-white shadow-md hover:bg-espresso-light active:scale-95 transition cursor-pointer"
+                  disabled={isConfirmingOrder}
+                  onClick={() => void handleConfirmProposalOrder()}
+                  className="w-full flex items-center justify-center gap-2 rounded-full bg-espresso py-3.5 text-sm font-bold text-white shadow-md hover:bg-espresso-light active:scale-95 transition cursor-pointer disabled:opacity-60"
                 >
                   <CheckCircle2 className="h-4 w-4 text-mocha-light" />
                   <span>
-                    Confirmar y Recibir Comida (
-                    {formatCurrencyMXN(proposalTotal)})
+                    {isConfirmingOrder
+                      ? "Enviando pedido al restaurante..."
+                      : `Confirmar y Recibir Comida (${formatCurrencyMXN(proposalTotal)})`}
                   </span>
                 </button>
                 <button
@@ -1239,22 +1318,69 @@ export default function CustomerHome() {
             )}
 
             {proposalStatus === "confirmed" && (
-              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-center space-y-1.5 animate-fadeIn">
-                <div className="flex items-center justify-center gap-1.5 text-emerald-800 text-sm font-bold">
-                  <Check className="h-4 w-4 text-emerald-600" />
-                  <span>¡Comida Confirmada Exitosamente!</span>
+              <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 space-y-3 animate-fadeIn">
+                <div className="flex items-center justify-between border-b border-emerald-200/80 pb-2">
+                  <div className="flex items-center gap-1.5 text-emerald-800 text-sm font-bold">
+                    <Check className="h-4 w-4 text-emerald-600" />
+                    <span>¡Pedido Confirmado y en Curso!</span>
+                  </div>
+                  <span className="rounded-full bg-white border border-emerald-300 px-2.5 py-0.5 text-xs font-extrabold text-emerald-900">
+                    #{activeOrder?.id || "ORD-2026-8421"}
+                  </span>
                 </div>
-                <p className="text-sm text-emerald-700 leading-snug">
-                  La comanda ha sido enviada al chef de{" "}
-                  <strong>{currentProposalRestaurant.name}</strong>. Tu pedido
-                  llegará hoy entre 13:30 y 14:15 hrs.
+
+                <p className="text-sm text-emerald-800 leading-snug">
+                  La comanda de <strong>{activeOrder?.dishName || currentProposalDish.name}</strong> fue enviada a{" "}
+                  <strong>{activeOrder?.restaurantName || currentProposalRestaurant.name}</strong>.
                 </p>
+
+                {activeOrder && (
+                  <div className="rounded-xl bg-white border border-emerald-200 p-3 space-y-2 text-xs text-espresso">
+                    <div className="flex items-center justify-between">
+                      <span className="text-coffee-muted font-medium">Estado en Restaurante:</span>
+                      <span className="rounded-full bg-cream-container border border-cream-border px-2.5 py-0.5 font-bold text-espresso">
+                        {KITCHEN_STAGE_LABELS[activeOrder.kitchenStage]}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-coffee-muted font-medium">Seguimiento de Entrega:</span>
+                      <span className="font-bold text-caramel text-right">
+                        {COURIER_STEP_LABELS[activeOrder.courierStep]}
+                      </span>
+                    </div>
+                    {activeOrder.courier && (
+                      <div className="pt-1.5 border-t border-cream-border flex items-center justify-between">
+                        <div>
+                          <span className="block font-bold text-espresso">
+                            Repartidor: {activeOrder.courier.name}
+                          </span>
+                          <span className="text-[11px] text-coffee-muted">
+                            {activeOrder.courier.vehicle} • Placas {activeOrder.courier.plates}
+                          </span>
+                        </div>
+                        <span className="text-[11px] font-bold text-roasted">
+                          {activeOrder.courier.phone}
+                        </span>
+                      </div>
+                    )}
+                    <div className="pt-1.5 border-t border-cream-border flex items-center justify-between">
+                      <span className="text-coffee-muted font-medium">Tu PIN de seguridad:</span>
+                      <span className="rounded-lg bg-espresso text-cream px-2 py-0.5 font-black tracking-widest">
+                        {activeOrder.deliveryPin}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="button"
-                  onClick={() => setProposalStatus("pending")}
+                  onClick={() => {
+                    setProposalStatus("pending");
+                    setActiveOrder(null);
+                  }}
                   className="text-sm text-emerald-800 underline font-semibold hover:text-emerald-950 block mx-auto cursor-pointer pt-1"
                 >
-                  Reiniciar simulación de pedido
+                  Hacer otro pedido / Reiniciar simulación
                 </button>
               </div>
             )}
