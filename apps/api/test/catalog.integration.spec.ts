@@ -23,6 +23,7 @@ config({ path: "../../.env", quiet: true });
 const databaseName = `coconea_test_${randomBytes(8).toString("hex")}`;
 const originalDatabaseUrl = process.env.DATABASE_URL!;
 const admin = new pg.Pool({ connectionString: originalDatabaseUrl });
+admin.on("error", () => {});
 let app: NestExpressApplication;
 let pool: pg.Pool;
 let cookie: string[];
@@ -63,6 +64,7 @@ describe("Catálogo local con PostgreSQL y sesiones Better Auth", () => {
     url.pathname = `/${databaseName}`;
     process.env.DATABASE_URL = url.toString();
     pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+    pool.on("error", () => {});
     const db = drizzle(pool);
     await migrate(db, { migrationsFolder: "./drizzle" });
     const hash = await hashPassword(password);
@@ -115,12 +117,21 @@ describe("Catálogo local con PostgreSQL y sesiones Better Auth", () => {
   });
 
   afterAll(async () => {
-    if (app) await app.close();
-    if (pool) await pool.end();
+    if (app) await app.close().catch(() => {});
+    if (pool) {
+      pool.on("error", () => {});
+      await pool.end().catch(() => {});
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
     process.env.DATABASE_URL = originalDatabaseUrl;
-    if (databaseCreated)
-      await admin.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
-    await admin.end();
+    if (databaseCreated) {
+      try {
+        await admin.query(`DROP DATABASE "${databaseName}" WITH (FORCE)`);
+      } catch {
+        // Ignorar si la base de datos efímera ya fue removida
+      }
+    }
+    await admin.end().catch(() => {});
   });
 
   it("acepta los filtros públicos de categoría y rechaza estructuras inválidas", async () => {
