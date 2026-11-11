@@ -587,36 +587,38 @@ export function buildNewActiveOrder(input: CreateOrderInput): ActiveOrder {
   };
 }
 
-async function fetchSharedBridgeOrders(): Promise<ActiveOrder[] | null> {
-  if (typeof window === "undefined") return null;
+let sharedChannel: BroadcastChannel | null = null;
+if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
   try {
-    const res = await fetch("/api/live-orders", {
-      cache: "no-store",
-      headers: { Accept: "application/json" },
-    });
-    if (res.ok) {
-      const payload = (await res.json()) as { data?: ActiveOrder[] };
-      if (Array.isArray(payload.data)) {
-        saveLocalOrders(payload.data);
-        return payload.data;
+    sharedChannel = new BroadcastChannel("coconea_live_orders_sync");
+    sharedChannel.onmessage = (e: MessageEvent<{ orders?: ActiveOrder[] }>) => {
+      if (Array.isArray(e.data?.orders)) {
+        saveLocalOrders(e.data.orders);
       }
-    }
+    };
   } catch {
-    // Ignore in static export mode
+    // Ignore channel creation errors
   }
+}
+
+async function fetchSharedBridgeOrders(): Promise<ActiveOrder[] | null> {
   return null;
 }
 
 async function upsertSharedBridgeOrder(order: ActiveOrder): Promise<void> {
   if (typeof window === "undefined") return;
-  try {
-    await fetch("/api/live-orders", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order }),
-    });
-  } catch {
-    // Ignore in static export mode
+  const current = getLocalOrders();
+  const exists = current.some((o) => o.id === order.id);
+  const updatedList = exists
+    ? current.map((o) => (o.id === order.id ? order : o))
+    : [order, ...current];
+  saveLocalOrders(updatedList);
+  if (sharedChannel) {
+    try {
+      sharedChannel.postMessage({ orders: updatedList });
+    } catch {
+      // Ignore broadcast errors
+    }
   }
 }
 
