@@ -20,14 +20,23 @@ import {
 } from 'lucide-react';
 import { PROJECT_NAME, formatCurrencyMXN } from '@coconea/shared';
 
-type AdminTab = 'metricas' | 'operaciones' | 'seguridad' | 'sistema';
+type AdminTab = 'metricas' | 'usuarios' | 'operaciones' | 'seguridad' | 'sistema';
 
 const TAB_LABELS: Record<AdminTab, string> = {
   metricas: 'Métricas',
+  usuarios: 'Usuarios',
   operaciones: 'Operaciones',
   seguridad: 'Seguridad',
   sistema: 'Sistema',
 };
+
+const RESTAURANT_USERS = [
+  { name: "McDonald's", email: 'mcdonalds@coconea.local' },
+  { name: 'Subway', email: 'subway@coconea.local' },
+  { name: 'KFC', email: 'kfc@coconea.local' },
+  { name: "Domino's", email: 'dominos@coconea.local' },
+  { name: 'Green Grass', email: 'greengrass@coconea.local' },
+] as const;
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('metricas');
@@ -106,7 +115,7 @@ export default function AdminDashboard() {
               </div>
 
               <nav className="space-y-1">
-                {(['metricas', 'operaciones', 'seguridad', 'sistema'] as AdminTab[]).map((tab) => (
+                {(['metricas', 'usuarios', 'operaciones', 'seguridad', 'sistema'] as AdminTab[]).map((tab) => (
                   <button
                     key={tab}
                     type="button"
@@ -129,12 +138,14 @@ export default function AdminDashboard() {
                         }`}
                       >
                         {tab === 'metricas' && <BarChart3 className="h-4 w-4" />}
+                        {tab === 'usuarios' && <Users className="h-4 w-4" />}
                         {tab === 'operaciones' && <Activity className="h-4 w-4" />}
                         {tab === 'seguridad' && <ShieldCheck className="h-4 w-4" />}
                         {tab === 'sistema' && <Settings className="h-4 w-4" />}
                       </div>
                       <span>
                         {tab === 'metricas' && 'Métricas y KPIs'}
+                        {tab === 'usuarios' && 'Usuarios y accesos'}
                         {tab === 'operaciones' && 'Operaciones y Propuestas'}
                         {tab === 'seguridad' && 'Seguridad y RBAC'}
                         {tab === 'sistema' && 'Parámetros del Sistema'}
@@ -200,7 +211,54 @@ export default function AdminDashboard() {
         )}
 
         {/* =========================================================================
-            VENTANA 2: OPERACIONES Y PROPUESTAS
+            VENTANA 2: USUARIOS Y ACCESOS
+           ========================================================================= */}
+        {activeTab === 'usuarios' && (
+          <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
+            <div className="text-center">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
+                Cuentas locales de prueba
+              </span>
+              <h2 className="text-base font-extrabold text-espresso">
+                Accesos de restaurantes
+              </h2>
+            </div>
+
+            <ul className="space-y-2">
+              {RESTAURANT_USERS.map((restaurant) => (
+                <li
+                  key={restaurant.email}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-cream-border bg-white p-3.5"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-espresso">{restaurant.name}</p>
+                    <p className="break-all text-xs text-coffee-muted">{restaurant.email}</p>
+                  </div>
+                  <a
+                    href="http://localhost:3001"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="shrink-0 rounded-full bg-espresso px-3 py-2 text-xs font-bold text-white transition hover:bg-roasted"
+                  >
+                    Ingresar
+                  </a>
+                </li>
+              ))}
+            </ul>
+
+            <p className="rounded-2xl border border-cream-border bg-cream-container/50 p-3 text-xs leading-relaxed text-coffee-muted">
+              Usa la contraseña de cada cuenta guardada en{' '}
+              <code className="break-all font-semibold text-espresso">
+                tmp/restaurant-accounts.json
+              </code>
+              . Por seguridad, este panel no muestra contraseñas. Estas cuentas
+              corresponden al entorno local y no sirven en la demo estática.
+            </p>
+          </section>
+        )}
+
+        {/* =========================================================================
+            VENTANA 3: OPERACIONES Y PROPUESTAS
            ========================================================================= */}
         {activeTab === 'operaciones' && (
           <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
@@ -246,7 +304,7 @@ export default function AdminDashboard() {
         )}
 
         {/* =========================================================================
-            VENTANA 3: SEGURIDAD Y RBAC
+            VENTANA 4: SEGURIDAD Y RBAC
            ========================================================================= */}
         {activeTab === 'seguridad' && (
           <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
@@ -289,7 +347,7 @@ export default function AdminDashboard() {
         )}
 
         {/* =========================================================================
-            VENTANA 4: PARÁMETROS DEL SISTEMA
+            VENTANA 5: PARÁMETROS DEL SISTEMA
            ========================================================================= */}
         {activeTab === 'sistema' && (
           <section className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-6 sm:p-7 shadow-sm space-y-4 animate-fadeIn">
@@ -348,6 +406,19 @@ export default function AdminDashboard() {
           >
             <BarChart3 className={`h-4 w-4 ${activeTab === 'metricas' ? 'text-caramel' : 'text-coffee-muted'}`} />
             <span>Métricas</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('usuarios')}
+            className={`flex flex-col items-center gap-0.5 text-[10px] py-1 px-2 rounded-full transition cursor-pointer ${
+              activeTab === 'usuarios'
+                ? 'font-bold text-espresso bg-cream-container shadow-2xs'
+                : 'font-medium text-coffee-muted hover:text-espresso'
+            }`}
+          >
+            <Users className={`h-4 w-4 ${activeTab === 'usuarios' ? 'text-caramel' : 'text-coffee-muted'}`} />
+            <span>Usuarios</span>
           </button>
 
           <button

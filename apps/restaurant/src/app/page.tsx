@@ -19,6 +19,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Flame,
+  Ban,
 } from "lucide-react";
 import { PROJECT_NAME, formatCurrencyMXN } from "@coconea/shared";
 
@@ -31,11 +32,62 @@ const TAB_LABELS: Record<RestaurantTab, string> = {
   perfil: "Restaurante",
 };
 
+interface OrderItem {
+  id: string;
+  code: string;
+  title: string;
+  status: "en_coccion" | "listo" | "cancelado";
+  allergens: string[];
+  calories: string;
+  timeElapsed: string;
+  price: number;
+}
+
 function RestaurantDashboard() {
   const [activeTab, setActiveTab] = useState<RestaurantTab>("cocina");
   const [menuOpen, setMenuOpen] = useState(false);
-  const [order1Ready, setOrder1Ready] = useState(false);
-  const [order2Ready, setOrder2Ready] = useState(false);
+
+  // Lista de órdenes para manejar estados y cancelaciones de forma limpia
+  const [orders, setOrders] = useState<OrderItem[]>([
+    {
+      id: "1",
+      code: "ORD-2026-081",
+      title: "Bowl Rústico de Quinoa & Salmón",
+      status: "en_coccion",
+      allergens: ["Sin Gluten", "Sin Lácteos"],
+      calories: "580 kcal objetivo",
+      timeElapsed: "12 min",
+      price: 185.0,
+    },
+    {
+      id: "2",
+      code: "ORD-2026-082",
+      title: "Pechuga al Romero & Vegetales Salteados",
+      status: "en_coccion",
+      allergens: ["Bajo en Carbohidratos (<10g)", "Sin Azúcares Añadidos"],
+      calories: "490 kcal objetivo",
+      timeElapsed: "Programado: 13:45 hrs",
+      price: 165.0,
+    },
+  ]);
+
+  const toggleOrderStatus = (id: string) => {
+    setOrders((prev) =>
+      prev.map((ord) => {
+        if (ord.id === id) {
+          const nextStatus = ord.status === "en_coccion" ? "listo" : "en_coccion";
+          return { ...ord, status: nextStatus };
+        }
+        return ord;
+      })
+    );
+  };
+
+  const cancelOrder = (id: string) => {
+    setOrders((prev) =>
+      prev.map((ord) => (ord.id === id ? { ...ord, status: "cancelado" } : ord))
+    );
+  };
 
   return (
     <div className="min-h-screen flex flex-col justify-between py-4 px-3 sm:py-6 sm:px-4 pb-24 selection:bg-caramel/20 selection:text-espresso">
@@ -93,11 +145,7 @@ function RestaurantDashboard() {
                 }`}
                 aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
               >
-                {menuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
+                {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </button>
             </div>
           </div>
@@ -185,137 +233,108 @@ function RestaurantDashboard() {
               </span>
             </div>
 
-            {/* Orden 1: Bowl Rústico de Quinoa */}
-            <div className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-5 sm:p-6 shadow-sm space-y-3.5">
-              <div className="flex items-center justify-between border-b border-cream-border pb-3">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
-                    ORDEN #ORD-2026-081
-                  </span>
-                  <h2 className="text-sm font-extrabold text-espresso">
-                    Bowl Rústico de Quinoa & Salmón
-                  </h2>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold border ${
-                    order1Ready
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-cream-container text-caramel border-cream-border"
-                  }`}
-                >
-                  {order1Ready ? "Listo p/ Repartidor" : "En Cocción"}
-                </span>
-              </div>
-
-              {/* Lista de Alérgenos & Restricciones Rigurosas */}
-              <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 text-espresso font-bold text-[11px]">
-                  <AlertTriangle className="h-3.5 w-3.5 text-caramel" />
-                  <span>Restricciones alimenticias estrictas:</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-caramel border border-cream-border">
-                    Sin Gluten
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-roasted border border-cream-border">
-                    Sin Lácteos
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-espresso border border-cream-border">
-                    580 kcal objetivo
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-xs text-coffee-muted">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5 text-roasted" />
-                  Tiempo transcurrido: 12 min
-                </span>
-                <span className="font-bold text-espresso">
-                  {formatCurrencyMXN(185.0)}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setOrder1Ready(!order1Ready)}
-                className={`w-full py-2.5 rounded-full text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                  order1Ready
-                    ? "border border-cream-border text-coffee-muted hover:bg-cream-container"
-                    : "bg-espresso text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark"
+            {/* Listado de Órdenes */}
+            {orders.map((ord) => (
+              <div
+                key={ord.id}
+                className={`rounded-3xl border backdrop-blur-md p-5 sm:p-6 shadow-sm space-y-3.5 transition ${
+                  ord.status === "cancelado"
+                    ? "bg-gray-50 border-gray-200 opacity-60"
+                    : "bg-white/95 border-cream-border/90"
                 }`}
               >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>
-                  {order1Ready
-                    ? "Regresar a Cocción"
-                    : "Marcar Listo para Entrega"}
-                </span>
-              </button>
-            </div>
-
-            {/* Orden 2: Ensalada Keto Verde */}
-            <div className="rounded-3xl border border-cream-border/90 bg-white/95 backdrop-blur-md p-5 sm:p-6 shadow-sm space-y-3.5">
-              <div className="flex items-center justify-between border-b border-cream-border pb-3">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
-                    ORDEN #ORD-2026-082
-                  </span>
-                  <h2 className="text-sm font-extrabold text-espresso">
-                    Pechuga al Romero & Vegetales Salteados
-                  </h2>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold border ${
-                    order2Ready
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                      : "bg-cream-soft text-roasted border-cream-border"
-                  }`}
-                >
-                  {order2Ready ? "Listo p/ Repartidor" : "Por Iniciar"}
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3 text-xs space-y-2">
-                <div className="flex items-center gap-1.5 text-espresso font-bold text-[11px]">
-                  <Flame className="h-3.5 w-3.5 text-caramel" />
-                  <span>Perfil Cetogénico (Keto):</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-caramel border border-cream-border">
-                    Bajo en Carbohidratos (&lt;10g)
-                  </span>
-                  <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-roasted border border-cream-border">
-                    Sin Azúcares Añadidos
+                <div className="flex items-center justify-between border-b border-cream-border pb-3">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-caramel block">
+                      ORDEN #{ord.code}
+                    </span>
+                    <h2 className="text-sm font-extrabold text-espresso">
+                      {ord.title}
+                    </h2>
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-[10px] font-bold border ${
+                      ord.status === "listo"
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                        : ord.status === "cancelado"
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : "bg-cream-container text-caramel border-cream-border"
+                    }`}
+                  >
+                    {ord.status === "listo"
+                      ? "Listo para entregar"
+                      : ord.status === "cancelado"
+                      ? "Cancelado"
+                      : "En cocción"}
                   </span>
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between text-xs text-coffee-muted">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5 text-roasted" />
-                  Programado: 13:45 hrs
-                </span>
-                <span className="font-bold text-espresso">
-                  {formatCurrencyMXN(165.0)}
-                </span>
-              </div>
+                {/* Restricciones rigurosas */}
+                <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3 text-xs space-y-2">
+                  <div className="flex items-center gap-1.5 text-espresso font-bold text-[11px]">
+                    <AlertTriangle className="h-3.5 w-3.5 text-caramel" />
+                    <span>Restricciones alimenticias estrictas:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ord.allergens.map((alg, idx) => (
+                      <span
+                        key={idx}
+                        className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-caramel border border-cream-border"
+                      >
+                        {alg}
+                      </span>
+                    ))}
+                    <span className="rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold text-espresso border border-cream-border">
+                      {ord.calories}
+                    </span>
+                  </div>
+                </div>
 
-              <button
-                type="button"
-                onClick={() => setOrder2Ready(!order2Ready)}
-                className={`w-full py-2.5 rounded-full text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
-                  order2Ready
-                    ? "border border-cream-border text-coffee-muted hover:bg-cream-container"
-                    : "bg-espresso text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark"
-                }`}
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>
-                  {order2Ready ? "Regresar a Cocción" : "Iniciar Preparación"}
-                </span>
-              </button>
-            </div>
+                <div className="flex items-center justify-between text-xs text-coffee-muted">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5 text-roasted" />
+                    {ord.timeElapsed}
+                  </span>
+                  <span className="font-bold text-espresso">
+                    {formatCurrencyMXN(ord.price)}
+                  </span>
+                </div>
+
+                {/* Botones de Acción (En Cocción / Listo para entregar + Cancelar) */}
+                {ord.status !== "cancelado" ? (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => toggleOrderStatus(ord.id)}
+                      className={`flex-1 py-2.5 rounded-full text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                        ord.status === "listo"
+                          ? "border border-cream-border text-coffee-muted hover:bg-cream-container"
+                          : "bg-espresso text-white shadow-xs hover:bg-espresso-light active:bg-espresso-dark"
+                      }`}
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>
+                        {ord.status === "listo"
+                          ? "Regresar a Cocción"
+                          : "Listo para entregar"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cancelOrder(ord.id)}
+                      className="px-4 py-2.5 rounded-full border border-red-200 bg-red-50/50 text-red-700 hover:bg-red-100 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    >
+                      <Ban className="h-3.5 w-3.5" />
+                      <span>Cancelar</span>
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-red-600 font-semibold pt-1">
+                    Este pedido ha sido cancelado por cocina.
+                  </p>
+                )}
+              </div>
+            ))}
           </div>
         )}
 

@@ -42,6 +42,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import CustomerDashboard from "@/app/components/CustomerDashboard";
+import DietPreferencesSettings from "@/app/components/DietPreferencesSettings";
 import { Navbar, CustomerTab } from "@/components/navbar";
 import { useAuth, DEMO_ACCOUNTS } from "@/context/auth-context";
 
@@ -1643,6 +1644,17 @@ export default function CustomerHome() {
 
             {isAuthenticated && user ? (
               <div className="space-y-3">
+                {/* Componente de Preferencias de Dieta y Frecuencia integrado */}
+                <DietPreferencesSettings
+                  currentDiet="balanced"
+                  currentMealsCount={3}
+                  onSave={(diet, mealsCount) => {
+                    console.log("Dieta guardada:", diet);
+                    console.log("Comidas al día:", mealsCount);
+                    showToast("¡Preferencias y frecuencia actualizadas!");
+                  }}
+                />
+
                 {/* Datos del Comensal */}
                 <div className="rounded-2xl border border-cream-border bg-cream-container/50 p-3.5 space-y-2.5 text-sm">
                   <div className="flex items-center gap-2.5">
