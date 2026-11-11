@@ -1636,6 +1636,8 @@ export default function CustomerHome() {
                           restaurantLocation={activeOrder.restaurantLocation}
                           courierName={activeOrder.courier.name}
                           courierLocation={activeOrder.courier.currentLocation}
+                          courierStep={activeOrder.courierStep}
+                          kitchenStage={activeOrder.kitchenStage}
                         />
                       </div>
                     ) : (
@@ -1656,6 +1658,8 @@ export default function CustomerHome() {
                           restaurantName={activeOrder.restaurantName}
                           restaurantAddress={activeOrder.restaurantAddress}
                           restaurantLocation={activeOrder.restaurantLocation}
+                          courierStep={activeOrder.courierStep}
+                          kitchenStage={activeOrder.kitchenStage}
                         />
                       </div>
                     )}
@@ -1666,19 +1670,31 @@ export default function CustomerHome() {
                         <div className="flex items-center gap-1.5">
                           <MessageSquare className="h-4 w-4 text-caramel" />
                           <span className="font-extrabold text-espresso">
-                            Chat en Vivo con tu Repartidor
+                            Chat en Vivo{" "}
+                            {activeOrder.courier
+                              ? `con ${activeOrder.courier.name}`
+                              : "con tu Repartidor"}
                           </span>
                         </div>
-                        <span className="text-[10px] font-bold text-caramel bg-cream-container px-2 py-0.5 rounded-full border border-cream-border">
-                          En línea
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            activeOrder.courier
+                              ? "text-emerald-800 bg-emerald-50 border-emerald-200"
+                              : "text-caramel bg-cream-container border-cream-border"
+                          }`}
+                        >
+                          {activeOrder.courier
+                            ? "Repartidor en línea"
+                            : "Esperando repartidor"}
                         </span>
                       </div>
 
                       {/* Lista de mensajes sincronizados */}
-                      <div className="max-h-48 overflow-y-auto space-y-2 rounded-xl bg-cream-soft/50 border border-cream-border p-2.5 flex flex-col">
+                      <div className="max-h-56 overflow-y-auto space-y-2 rounded-xl bg-cream-soft/50 border border-cream-border p-2.5 flex flex-col">
                         {activeOrder.messages.map((msg) => {
                           const isMe = msg.senderRole === "USER";
                           const isSystem = msg.senderRole === "SYSTEM";
+                          const isCourier = msg.senderRole === "DELIVERY";
                           return (
                             <div
                               key={msg.id}
@@ -1687,11 +1703,17 @@ export default function CustomerHome() {
                                   ? "ml-auto bg-espresso text-white"
                                   : isSystem
                                     ? "mx-auto bg-cream-container/90 text-coffee-muted text-[10px] text-center border border-cream-border"
-                                    : "mr-auto bg-white text-espresso border border-cream-border"
+                                    : "mr-auto bg-white text-espresso border border-caramel/40"
                               }`}
                             >
-                              <p className="text-[10px] font-bold opacity-80 mb-0.5">
-                                {isMe ? "Tú (Cliente)" : msg.senderName}
+                              <p className="text-[10px] font-bold opacity-85 mb-0.5 flex items-center gap-1">
+                                <span>
+                                  {isMe
+                                    ? "👤 Tú (Cliente)"
+                                    : isCourier
+                                      ? `🛵 ${msg.senderName}`
+                                      : `🏪 ${msg.senderName}`}
+                                </span>
                               </p>
                               <p className="leading-snug">{msg.text}</p>
                               <span className="block text-[9px] text-right opacity-70 mt-0.5">
@@ -1707,7 +1729,7 @@ export default function CustomerHome() {
                         {[
                           "¡Hola! Te espero en la entrada principal.",
                           "Por favor toca el timbre 3B al llegar.",
-                          "¡Gracias! Ya tengo listo mi PIN 4821.",
+                          `¡Gracias! Ya tengo listo mi PIN ${activeOrder.deliveryPin}.`,
                         ].map((quickMsg, idx) => (
                           <button
                             key={idx}

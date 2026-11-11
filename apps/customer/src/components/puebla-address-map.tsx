@@ -14,12 +14,17 @@ import {
 import {
   PUEBLA_CENTER,
   PUEBLA_QUICK_LOCATIONS,
+  PUEBLA_RESTAURANT_BRANCHES,
   geocodePueblaAddress,
   reverseGeocodePuebla,
   fetchRealOsrmRoute,
   latLngToPueblaPoint,
 } from "@coconea/shared";
-import type { GeoPoint } from "@coconea/types";
+import type {
+  CourierTrackingStep,
+  GeoPoint,
+  KitchenOrderStage,
+} from "@coconea/types";
 
 interface LeafletMapInstance {
   setView: (center: [number, number], zoom?: number) => void;
@@ -109,6 +114,8 @@ export interface PueblaAddressMapProps {
   restaurantLocation: GeoPoint;
   courierName?: string | null;
   courierLocation?: GeoPoint | null;
+  courierStep?: CourierTrackingStep;
+  kitchenStage?: KitchenOrderStage;
   onChangeAddressAndLocation?: (address: string, location: GeoPoint) => void;
 }
 
@@ -121,14 +128,21 @@ export function PueblaAddressMap({
   restaurantLocation,
   courierName,
   courierLocation,
+  courierStep,
+  kitchenStage,
   onChangeAddressAndLocation,
 }: PueblaAddressMapProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<LeafletMapInstance | null>(null);
   const customerMarkerRef = useRef<LeafletMarkerInstance | null>(null);
   const restaurantMarkerRef = useRef<LeafletMarkerInstance | null>(null);
+  const otherBranchMarkersRef = useRef<LeafletMarkerInstance[]>([]);
   const courierMarkerRef = useRef<LeafletMarkerInstance | null>(null);
   const routePolylineRef = useRef<LeafletPolylineInstance | null>(null);
+  const referenceRoutePolylineRef = useRef<LeafletPolylineInstance | null>(
+    null,
+  );
+  const lastFittedKeyRef = useRef<string>("");
 
   const [leafletReady, setLeafletReady] = useState(false);
   const [searchInput, setSearchInput] = useState(customerAddress);
@@ -139,6 +153,13 @@ export function PueblaAddressMap({
     durationMinutes: number;
   }>({ distanceKm: 1.4, durationMinutes: 8 });
   const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
+
+  const isCourierEnRouteToCustomer =
+    mode === "tracking" &&
+    Boolean(courierLocation) &&
+    (courierStep === "EN_ENTREGA" ||
+      courierStep === "EN_DOMICILIO" ||
+      kitchenStage === "EN_DELIVERY");
 
   useEffect(() => {
     setSearchInput(customerAddress);
@@ -197,8 +218,10 @@ export function PueblaAddressMap({
         mapInstanceRef.current = null;
         customerMarkerRef.current = null;
         restaurantMarkerRef.current = null;
+        otherBranchMarkersRef.current = [];
         courierMarkerRef.current = null;
         routePolylineRef.current = null;
+        referenceRoutePolylineRef.current = null;
       }
     };
   }, [mode]);
@@ -209,7 +232,32 @@ export function PueblaAddressMap({
     const L = window.L;
     const map = mapInstanceRef.current;
 
-    // 1. Marcador del Restaurante en Puebla
+    // 0. Marcadores secundarios de las demás sucursales registradas en Puebla
+    for (const m of otherBranchMarkersRef.current) {
+      m.remove();
+    }
+    otherBranchMarkersRef.current = [];
+    for (const branch of PUEBLA_RESTAURANT_BRANCHES) {
+      if (branch.name.toLowerCase() === restaurantName.toLowerCase()) continue;
+      const otherIcon = L.divIcon({
+        className: "coconea-map-icon",
+        html: `<div style="background:#FFF8F5;color:#6F4E37;border:1.5px solid #C49A6C;border-radius:9999px;padding:2px 7px;font-size:9px;font-weight:700;white-space:nowrap;box-shadow:0 2px 5px rgba(61,35,20,0.15);opacity:0.82;">
+          ${branch.emoji} ${branch.name}
+        </div>`,
+        iconSize: [110, 20],
+        iconAnchor: [55, 10],
+      });
+      const bMarker = L.marker([branch.location.lat, branch.location.lng], {
+        icon: otherIcon,
+      })
+        .addTo(map)
+        .bindPopup(
+          `<strong>${branch.emoji} ${branch.name} (${branch.zone})</strong><br/><span style="font-size:11px">📍 ${branch.address}</span>`,
+        );
+      otherBranchMarkersRef.current.push(bMarker);
+    }
+
+    // 1. Marcador del Restaurante Elegido en Puebla
     const restIcon = L.divIcon({
       className: "coconea-map-icon",
       html: `<div style="background:#3D2314;color:#FFF8F5;border:2px solid #D27D2D;border-radius:9999px;padding:4px 10px;font-size:11px;font-weight:800;white-space:nowrap;box-shadow:0 4px 12px rgba(61,35,20,0.35);display:flex;align-items:center;gap:4px;">
@@ -226,13 +274,16 @@ export function PueblaAddressMap({
       )
         .addTo(map)
         .bindPopup(
-          `<strong>${restaurantName}</strong><br/><span style="font-size:11px">${restaurantAddress}</span>`,
+          `<strong>${restaurantName}</strong><br/><span style="font-size:11px">📍 ${restaurantAddress}</span>`,
         );
     } else {
       restaurantMarkerRef.current.setLatLng([
         restaurantLocation.lat,
         restaurantLocation.lng,
       ]);
+      restaurantMarkerRef.current.bindPopup(
+        `<strong>${restaurantName}</strong><br/><span style="font-size:11px">📍 ${restaurantAddress}</span>`,
+      );
     }
 
     // 2. Pin del Cliente (Arrastrable en modo picker)
@@ -287,51 +338,112 @@ export function PueblaAddressMap({
         courierMarkerRef.current = L.marker(
           [courierLocation.lat, courierLocation.lng],
           { icon: courierIcon },
-        ).addTo(map);
+        )
+          .addTo(map)
+          .bindPopup(
+            `<strong>Repartidor: ${courierName || "En ruta"}</strong><br/><span style="font-size:11px">${courierLocation.label || "Avanzando por calles de Puebla"}</span>`,
+          );
       } else {
         courierMarkerRef.current.setLatLng([
           courierLocation.lat,
           courierLocation.lng,
         ]);
+        courierMarkerRef.current.bindPopup(
+          `<strong>Repartidor: ${courierName || "En ruta"}</strong><br/><span style="font-size:11px">${courierLocation.label || "Avanzando por calles de Puebla"}</span>`,
+        );
       }
     } else if (courierMarkerRef.current) {
       courierMarkerRef.current.remove();
       courierMarkerRef.current = null;
     }
 
-    // 4. Trazar ruta real por calles de Puebla con OSRM
-    const waypoints = courierLocation
-      ? [courierLocation, restaurantLocation, customerLocation]
-      : [restaurantLocation, customerLocation];
-
+    // 4. Trazar ruta real por calles de Puebla con OSRM:
+    // - Si el repartidor YA recibió el pedido (EN_ENTREGA / EN_DOMICILIO), el usuario ve:
+    //   a) El corredor completo Restaurante -> Domicilio en línea punteada suave (#C49A6C)
+    //   b) La ruta ACTIVA en tiempo real desde la posición del Repartidor -> Domicilio en Espresso sólido (#3D2314)
     let cancelled = false;
-    void fetchRealOsrmRoute(waypoints).then((route) => {
-      if (cancelled || !mapInstanceRef.current) return;
-      setRouteMetrics({
-        distanceKm: route.distanceKm,
-        durationMinutes: route.durationMin,
-      });
+    const drawCustomerMapRoutes = async () => {
+      if (isCourierEnRouteToCustomer && courierLocation) {
+        const [fullCorridor, activeCourierLeg] = await Promise.all([
+          fetchRealOsrmRoute([restaurantLocation, customerLocation]),
+          fetchRealOsrmRoute([courierLocation, customerLocation]),
+        ]);
+        if (cancelled || !mapInstanceRef.current) return;
 
-      if (!routePolylineRef.current) {
-        routePolylineRef.current = L.polyline(route.coordinates, {
-          color: "#3D2314",
-          weight: 4,
-          opacity: 0.88,
-          dashArray: mode === "picker" ? "6, 6" : undefined,
-        }).addTo(map);
+        setRouteMetrics({
+          distanceKm: activeCourierLeg.distanceKm,
+          durationMinutes: activeCourierLeg.durationMin,
+        });
+
+        if (!referenceRoutePolylineRef.current) {
+          referenceRoutePolylineRef.current = L.polyline(
+            fullCorridor.coordinates,
+            {
+              color: "#C49A6C",
+              weight: 3,
+              opacity: 0.6,
+              dashArray: "6, 6",
+            },
+          ).addTo(map);
+        } else {
+          referenceRoutePolylineRef.current.setLatLngs(
+            fullCorridor.coordinates,
+          );
+        }
+
+        if (!routePolylineRef.current) {
+          routePolylineRef.current = L.polyline(activeCourierLeg.coordinates, {
+            color: "#3D2314",
+            weight: 5,
+            opacity: 0.95,
+          }).addTo(map);
+        } else {
+          routePolylineRef.current.setLatLngs(activeCourierLeg.coordinates);
+        }
       } else {
-        routePolylineRef.current.setLatLngs(route.coordinates);
+        if (referenceRoutePolylineRef.current) {
+          referenceRoutePolylineRef.current.remove();
+          referenceRoutePolylineRef.current = null;
+        }
+        const waypoints =
+          courierLocation && courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE"
+            ? [courierLocation, restaurantLocation, customerLocation]
+            : [restaurantLocation, customerLocation];
+        const route = await fetchRealOsrmRoute(waypoints);
+        if (cancelled || !mapInstanceRef.current) return;
+
+        setRouteMetrics({
+          distanceKm: route.distanceKm,
+          durationMinutes: route.durationMin,
+        });
+
+        if (!routePolylineRef.current) {
+          routePolylineRef.current = L.polyline(route.coordinates, {
+            color: "#3D2314",
+            weight: 4,
+            opacity: 0.88,
+            dashArray: mode === "picker" ? "6, 6" : undefined,
+          }).addTo(map);
+        } else {
+          routePolylineRef.current.setLatLngs(route.coordinates);
+        }
       }
 
-      const boundsPoints: [number, number][] = [
-        [restaurantLocation.lat, restaurantLocation.lng],
-        [customerLocation.lat, customerLocation.lng],
-      ];
-      if (courierLocation) {
-        boundsPoints.push([courierLocation.lat, courierLocation.lng]);
+      const fitKey = `${mode}|${restaurantName}|${customerLocation.lat.toFixed(4)},${customerLocation.lng.toFixed(4)}|${courierStep || "none"}`;
+      if (lastFittedKeyRef.current !== fitKey) {
+        lastFittedKeyRef.current = fitKey;
+        const boundsPoints: [number, number][] = [
+          [restaurantLocation.lat, restaurantLocation.lng],
+          [customerLocation.lat, customerLocation.lng],
+        ];
+        if (courierLocation) {
+          boundsPoints.push([courierLocation.lat, courierLocation.lng]);
+        }
+        map.fitBounds(boundsPoints, { padding: [36, 36], maxZoom: 15 });
       }
-      map.fitBounds(boundsPoints, { padding: [36, 36], maxZoom: 15 });
-    });
+    };
+
+    void drawCustomerMapRoutes();
 
     return () => {
       cancelled = true;
@@ -343,9 +455,14 @@ export function PueblaAddressMap({
     restaurantLocation.lat,
     restaurantLocation.lng,
     restaurantName,
+    restaurantAddress,
     courierLocation?.lat,
     courierLocation?.lng,
+    courierLocation?.label,
     courierName,
+    courierStep,
+    kitchenStage,
+    isCourierEnRouteToCustomer,
     mode,
   ]);
 
@@ -381,13 +498,46 @@ export function PueblaAddressMap({
           <span className="text-xs font-extrabold text-espresso">
             {mode === "picker"
               ? "Dirección de Envío y Pin en Puebla"
-              : "Mapa en Vivo y Ruta Real en Puebla"}
+              : isCourierEnRouteToCustomer
+                ? "Ruta en Vivo del Repartidor hacia tu Domicilio"
+                : "Mapa en Vivo y Ruta Real en Puebla"}
           </span>
         </div>
         <span className="rounded-full bg-cream-container border border-cream-border px-2.5 py-0.5 text-[10px] font-bold text-caramel">
-          Ruta real: {routeMetrics.distanceKm} km • ~{routeMetrics.durationMinutes} min
+          {isCourierEnRouteToCustomer ? "Restan:" : "Ruta real:"}{" "}
+          {routeMetrics.distanceKm} km • ~{routeMetrics.durationMinutes} min
         </span>
       </div>
+
+      {mode === "tracking" && (
+        <div
+          className={`rounded-xl border px-2.5 py-2 text-[11px] flex items-start gap-2 ${
+            isCourierEnRouteToCustomer
+              ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+              : "bg-cream-container/60 border-cream-border text-espresso"
+          }`}
+        >
+          {isCourierEnRouteToCustomer ? (
+            <Bike className="h-4 w-4 text-emerald-700 shrink-0 mt-0.5" />
+          ) : (
+            <Store className="h-4 w-4 text-caramel shrink-0 mt-0.5" />
+          )}
+          <div className="space-y-0.5">
+            <p className="font-extrabold leading-snug">
+              {isCourierEnRouteToCustomer
+                ? `🛵 ¡${courierName || "Tu repartidor"} recibió el pedido en ${restaurantName} y sigue la ruta hacia tu punto de entrega!`
+                : courierLocation
+                  ? `🏪 ${courierName || "Tu repartidor"} se dirige o espera en ${restaurantName} (${restaurantAddress}) para recoger tu paquete.`
+                  : `🏪 Sucursal origen: ${restaurantName} (${restaurantAddress}) → Tu Pin de Entrega.`}
+            </p>
+            {courierLocation?.label && (
+              <p className="text-[10px] opacity-85 font-semibold">
+                Posición actual: {courierLocation.label}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {mode === "picker" && (
         <>
