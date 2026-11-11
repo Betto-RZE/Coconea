@@ -9,7 +9,7 @@ import type {
 } from "@coconea/types";
 
 const DEFAULT_API_URL = "http://localhost:4000/v1";
-const LOCAL_STORAGE_ORDERS_KEY = "coconea_active_orders_puebla_v2";
+const LOCAL_STORAGE_ORDERS_KEY = "coconea_live_orders_puebla_v3";
 
 export const PUEBLA_CENTER = {
   lat: 19.0414,
@@ -78,33 +78,33 @@ export const DEFAULT_COURIER_LOCATION: GeoPoint = latLngToPueblaPoint(
 );
 
 const RAICES_LOCATION: GeoPoint = latLngToPueblaPoint(
-  19.0461,
-  -98.2128,
-  "Av. Juárez 2318, Col. La Paz, Puebla, Pue.",
+  19.0488,
+  -98.2165,
+  "Av. Juárez 2318, Col. La Paz, 72160 Puebla, Pue.",
 );
 
 const BOTANICA_LOCATION: GeoPoint = latLngToPueblaPoint(
-  19.0433,
-  -98.1980,
-  "Av. Reforma 125, Centro Histórico, Puebla, Pue.",
+  19.0453,
+  -98.1998,
+  "Av. Reforma 518, Centro Histórico, 72000 Puebla, Pue.",
 );
 
 const PACIFICO_LOCATION: GeoPoint = latLngToPueblaPoint(
-  19.0355,
-  -98.2025,
-  "Blvd. Héroes del 5 de Mayo 3108, Ladrillera de Benítez, Puebla, Pue.",
+  19.0398,
+  -98.1945,
+  "Blvd. Héroes del 5 de Mayo 704, El Carmen, 72530 Puebla, Pue.",
 );
 
 const DOMINOS_LOCATION: GeoPoint = latLngToPueblaPoint(
-  19.0298,
-  -98.2095,
-  "Calle 43 Pte. 115, Huexotitla, Puebla, Pue.",
+  19.0345,
+  -98.2042,
+  "Av. 43 Poniente 302, Huexotitla, 72534 Puebla, Pue.",
 );
 
 const GREENGRASS_LOCATION: GeoPoint = latLngToPueblaPoint(
-  19.0312,
-  -98.2320,
-  "Blvd. del Niño Poblano 2510, Angelópolis, Puebla, Pue.",
+  19.0298,
+  -98.2305,
+  "Blvd. del Niño Poblano 2510, Reserva Territorial Atlixcáyotl, 72190 Puebla, Pue.",
 );
 
 export const RESTAURANT_LOCATIONS: Record<string, GeoPoint> = {
@@ -114,6 +114,58 @@ export const RESTAURANT_LOCATIONS: Record<string, GeoPoint> = {
   "rest-dominos": DOMINOS_LOCATION,
   "rest-greengrass": GREENGRASS_LOCATION,
 };
+
+export interface PueblaRestaurantBranch {
+  id: string;
+  name: string;
+  emoji: string;
+  zone: string;
+  address: string;
+  location: GeoPoint;
+}
+
+export const PUEBLA_RESTAURANT_BRANCHES: PueblaRestaurantBranch[] = [
+  {
+    id: "rest-raices",
+    name: "McDonald's",
+    emoji: "🍔",
+    zone: "Av. Juárez / La Paz",
+    address: "Av. Juárez 2318, Col. La Paz, 72160 Puebla, Pue.",
+    location: RAICES_LOCATION,
+  },
+  {
+    id: "rest-botanica",
+    name: "Subway",
+    emoji: "🥖",
+    zone: "Centro Histórico",
+    address: "Av. Reforma 518, Centro Histórico, 72000 Puebla, Pue.",
+    location: BOTANICA_LOCATION,
+  },
+  {
+    id: "rest-pacifico",
+    name: "KFC",
+    emoji: "🍗",
+    zone: "Blvd. 5 de Mayo / El Carmen",
+    address: "Blvd. Héroes del 5 de Mayo 704, El Carmen, 72530 Puebla, Pue.",
+    location: PACIFICO_LOCATION,
+  },
+  {
+    id: "rest-dominos",
+    name: "Domino's",
+    emoji: "🍕",
+    zone: "Huexotitla",
+    address: "Av. 43 Poniente 302, Huexotitla, 72534 Puebla, Pue.",
+    location: DOMINOS_LOCATION,
+  },
+  {
+    id: "rest-greengrass",
+    name: "Green Grass",
+    emoji: "🥗",
+    zone: "Angelópolis",
+    address: "Blvd. del Niño Poblano 2510, Angelópolis, 72190 Puebla, Pue.",
+    location: GREENGRASS_LOCATION,
+  },
+];
 
 export const DEFAULT_COURIER_PROFILE: CourierInfo = {
   id: "courier_rodrigo_01",
@@ -431,274 +483,7 @@ export const COURIER_STEP_LABELS: Record<CourierTrackingStep, string> = {
   ENTREGADO: "Pedido entregado y validado",
 };
 
-export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [
-  {
-    id: "ORD-2026-081",
-    proposalCode: "PROP-8418",
-    restaurantId: "rest-raices",
-    restaurantName: "McDonald's",
-    restaurantAddress: "Av. Juárez 2318, Col. La Paz, Puebla, Pue.",
-    restaurantLocation: RAICES_LOCATION,
-    customerId: "usr_demo_standard_01",
-    customerName: "Sofía Méndez",
-    customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 222 123 5678",
-    customerAddress: "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "sofia.mendez@coconea.local",
-      "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
-    ),
-    dishId: "dish-r1",
-    dishName: "Big Mac",
-    dishPrice: 99,
-    beverageId: "bev-r3",
-    beverageName: "Café americano",
-    beveragePrice: 35,
-    compostableCutlery: true,
-    allergens: ["Sin Maní", "Sin Nueces"],
-    dietaryNotes: ["Plan Equilibrado"],
-    caloriesText: "550 kcal • 28g Prot",
-    subtotal: 134,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 169,
-    courierEarnings: 44,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 1.3,
-    estimatedWindow: "13:30 - 14:15 hrs",
-    kitchenStage: "POR_HACER",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_0",
-        orderId: "ORD-2026-081",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pedido confirmado por Sofía Méndez en Puebla (Col. La Paz). Recibido en McDonald's Av. Juárez.",
-        timestamp: "12:38",
-      },
-    ],
-    createdAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-082",
-    proposalCode: "PROP-8419",
-    restaurantId: "rest-botanica",
-    restaurantName: "Subway",
-    restaurantAddress: "Av. Reforma 125, Centro Histórico, Puebla, Pue.",
-    restaurantLocation: BOTANICA_LOCATION,
-    customerId: "usr_demo_keto_02",
-    customerName: "Carlos Gómez",
-    customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 222 812 9901",
-    customerAddress: "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "carlos.gomez@coconea.local",
-      "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
-    ),
-    dishId: "dish-b1",
-    dishName: "Pollo Estilo Teriyaki",
-    dishPrice: 119,
-    beverageId: null,
-    beverageName: null,
-    beveragePrice: 0,
-    compostableCutlery: true,
-    allergens: ["Sin Lácteos"],
-    dietaryNotes: ["Alto en Proteína", "Sin Azúcares Añadidos"],
-    caloriesText: "490 kcal • 36g Prot",
-    subtotal: 119,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 154,
-    courierEarnings: 46,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 1.9,
-    estimatedWindow: "13:30 - 14:15 hrs",
-    kitchenStage: "EN_ESPERA_REPARTIDOR",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_1",
-        orderId: "ORD-2026-082",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pedido listo en mostrador para recolección en Subway Centro Histórico, Puebla.",
-        timestamp: "12:40",
-      },
-    ],
-    createdAt: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-083",
-    proposalCode: "PROP-8420",
-    restaurantId: "rest-greengrass",
-    restaurantName: "Green Grass",
-    restaurantAddress: "Blvd. del Niño Poblano 2510, Angelópolis, Puebla, Pue.",
-    restaurantLocation: GREENGRASS_LOCATION,
-    customerId: "usr_demo_vegan_03",
-    customerName: "Valeria Ríos",
-    customerEmail: "valeria.rios@coconea.local",
-    customerPhone: "+52 222 674 2230",
-    customerAddress: "Calle 3 Sur 1508, El Carmen, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "valeria.rios@coconea.local",
-      "Calle 3 Sur 1508, El Carmen, Puebla, Pue.",
-    ),
-    dishId: "dish-g1",
-    dishName: "Cesar & Bacon",
-    dishPrice: 159,
-    beverageId: null,
-    beverageName: null,
-    beveragePrice: 0,
-    compostableCutlery: true,
-    allergens: ["Sin Nueces"],
-    dietaryNotes: ["Fresca", "Orgánico"],
-    caloriesText: "520 kcal • 24g Prot",
-    subtotal: 159,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 194,
-    courierEarnings: 52,
-    paymentMethod: "Efectivo",
-    deliveryPin: "4821",
-    distanceKm: 2.4,
-    estimatedWindow: "13:45 - 14:20 hrs",
-    kitchenStage: "EN_PREPARACION",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_2",
-        orderId: "ORD-2026-083",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Cocina preparando orden en Green Grass Angelópolis, Puebla.",
-        timestamp: "12:45",
-      },
-    ],
-    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-084",
-    proposalCode: "PROP-8422",
-    restaurantId: "rest-pacifico",
-    restaurantName: "KFC",
-    restaurantAddress:
-      "Blvd. Héroes del 5 de Mayo 3108, Ladrillera de Benítez, Puebla, Pue.",
-    restaurantLocation: PACIFICO_LOCATION,
-    customerId: "usr_demo_standard_01",
-    customerName: "Sofía Méndez",
-    customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 222 123 5678",
-    customerAddress: "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "sofia.mendez@coconea.local",
-      "Av. Teziutlán Sur 45, Col. La Paz, Puebla, Pue.",
-    ),
-    dishId: "dish-p2",
-    dishName: "Megabox Big Krunch",
-    dishPrice: 199,
-    beverageId: "bev-p1",
-    beverageName: "Refresco de lata",
-    beveragePrice: 35,
-    compostableCutlery: true,
-    allergens: ["Sin Maní"],
-    dietaryNotes: ["Alto en Proteína"],
-    caloriesText: "640 kcal • 38g Prot",
-    subtotal: 234,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 269,
-    courierEarnings: 49,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 2.2,
-    estimatedWindow: "13:40 - 14:20 hrs",
-    kitchenStage: "POR_HACER",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_3",
-        orderId: "ORD-2026-084",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pedido confirmado y enviado a cocina KFC Blvd. 5 de Mayo, Puebla.",
-        timestamp: "12:48",
-      },
-    ],
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-085",
-    proposalCode: "PROP-8423",
-    restaurantId: "rest-dominos",
-    restaurantName: "Domino's",
-    restaurantAddress: "Calle 43 Pte. 115, Huexotitla, Puebla, Pue.",
-    restaurantLocation: DOMINOS_LOCATION,
-    customerId: "usr_demo_keto_02",
-    customerName: "Carlos Gómez",
-    customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 222 812 9901",
-    customerAddress: "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "carlos.gomez@coconea.local",
-      "Av. 31 Poniente 1315, Col. Los Volcanes, Puebla, Pue.",
-    ),
-    dishId: "dish-d1",
-    dishName: "Pizza de pepperoni",
-    dishPrice: 199,
-    beverageId: null,
-    beverageName: null,
-    beveragePrice: 0,
-    compostableCutlery: false,
-    allergens: ["Sin Nueces"],
-    dietaryNotes: ["Horneado tradicional"],
-    caloriesText: "590 kcal • 26g Prot",
-    subtotal: 199,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 234,
-    courierEarnings: 48,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 1.2,
-    estimatedWindow: "13:45 - 14:30 hrs",
-    kitchenStage: "EN_PREPARACION",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_4",
-        orderId: "ORD-2026-085",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pizza en horno en sucursal Domino's Huexotitla, Puebla.",
-        timestamp: "12:50",
-      },
-    ],
-    createdAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-];
+export const INITIAL_DEMO_ORDERS: ActiveOrder[] = [];
 
 function getLocalOrders(): ActiveOrder[] {
   if (typeof window === "undefined") return INITIAL_DEMO_ORDERS;
@@ -706,7 +491,7 @@ function getLocalOrders(): ActiveOrder[] {
     const raw = window.localStorage.getItem(LOCAL_STORAGE_ORDERS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as ActiveOrder[];
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
     window.localStorage.setItem(
       LOCAL_STORAGE_ORDERS_KEY,
@@ -1087,23 +872,33 @@ export async function updateCourierTrackingStep(
     hour: "2-digit",
     minute: "2-digit",
   });
+  const previousStep = existing.courierStep;
   const target: ActiveOrder = {
     ...existing,
     courierStep,
     updatedAt: now.toISOString(),
   };
 
-  if (courierStep === "ESPERANDO_PEDIDO" && target.courier) {
+  if (
+    courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" &&
+    target.courier &&
+    options?.courierLocation
+  ) {
     target.courier = {
       ...target.courier,
-      currentLocation: existing.restaurantLocation,
+      currentLocation: options.courierLocation,
+    };
+  } else if (courierStep === "ESPERANDO_PEDIDO" && target.courier) {
+    target.courier = {
+      ...target.courier,
+      currentLocation: options?.courierLocation || existing.restaurantLocation,
     };
   } else if (courierStep === "EN_ENTREGA") {
     target.kitchenStage = "EN_DELIVERY";
     if (target.courier) {
       target.courier = {
         ...target.courier,
-        currentLocation: {
+        currentLocation: options?.courierLocation || {
           x: Math.round(
             (existing.restaurantLocation.x + existing.customerLocation.x) / 2,
           ),
@@ -1116,7 +911,7 @@ export async function updateCourierTrackingStep(
           lng:
             (existing.restaurantLocation.lng + existing.customerLocation.lng) /
             2,
-          label: "En trayecto hacia domicilio",
+          label: "En trayecto hacia domicilio en Puebla",
         },
       };
     }
@@ -1125,7 +920,7 @@ export async function updateCourierTrackingStep(
     if (target.courier) {
       target.courier = {
         ...target.courier,
-        currentLocation: existing.customerLocation,
+        currentLocation: options?.courierLocation || existing.customerLocation,
       };
     }
   } else if (courierStep === "ENTREGADO") {
@@ -1134,7 +929,7 @@ export async function updateCourierTrackingStep(
     if (target.courier) {
       target.courier = {
         ...target.courier,
-        currentLocation: existing.customerLocation,
+        currentLocation: options?.courierLocation || existing.customerLocation,
       };
     }
   }
@@ -1142,23 +937,25 @@ export async function updateCourierTrackingStep(
   const stepNotice: Record<CourierTrackingStep, string> = {
     SIN_ASIGNAR: "Sin repartidor asignado.",
     ACEPTADO_EN_RUTA_RESTAURANTE: "En camino al restaurante para recoger.",
-    ESPERANDO_PEDIDO: `Llegué a ${existing.restaurantName} y estoy esperando a que me entreguen tu paquete.`,
-    EN_ENTREGA: `¡Ya tengo tu pedido de ${existing.restaurantName}! Voy en camino hacia ${existing.customerAddress}.`,
+    ESPERANDO_PEDIDO: `Llegué a ${existing.restaurantName} (${existing.restaurantAddress}) y estoy esperando a que me entreguen tu paquete.`,
+    EN_ENTREGA: `¡Ya recibí tu pedido en ${existing.restaurantName}! Voy en camino hacia tu domicilio en ${existing.customerAddress}.`,
     EN_DOMICILIO: `Ya llegué a tu domicilio (${existing.customerAddress}). Ten listo tu PIN de entrega.`,
     ENTREGADO: `Pedido entregado satisfactoriamente. ¡Buen provecho!`,
   };
 
-  target.messages = [
-    ...existing.messages,
-    {
-      id: `msg_${Date.now()}`,
-      orderId,
-      senderRole: "DELIVERY",
-      senderName: target.courier?.name || "Repartidor",
-      text: stepNotice[courierStep],
-      timestamp: timeLabel,
-    },
-  ];
+  if (previousStep !== courierStep) {
+    target.messages = [
+      ...existing.messages,
+      {
+        id: `msg_${Date.now()}`,
+        orderId,
+        senderRole: "DELIVERY",
+        senderName: target.courier?.name || "Repartidor",
+        text: stepNotice[courierStep],
+        timestamp: timeLabel,
+      },
+    ];
+  }
   orders[idx] = target;
   saveLocalOrders(orders);
   return target;

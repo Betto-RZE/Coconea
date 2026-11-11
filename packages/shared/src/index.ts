@@ -103,6 +103,7 @@ export { catalogRequest, CatalogApiError } from "./catalog-client";
 export {
   PUEBLA_CENTER,
   PUEBLA_QUICK_LOCATIONS,
+  PUEBLA_RESTAURANT_BRANCHES,
   latLngToPueblaPoint,
   geocodePueblaAddress,
   reverseGeocodePuebla,
@@ -126,4 +127,8 @@ export {
   updateCourierTrackingStep,
   sendOrderChatMessage,
 } from "./order-workflow-client";
-export type { GeocodeResult, OsrmRouteResult } from "./order-workflow-client";
+export type {
+  GeocodeResult,
+  OsrmRouteResult,
+  PueblaRestaurantBranch,
+} from "./order-workflow-client";

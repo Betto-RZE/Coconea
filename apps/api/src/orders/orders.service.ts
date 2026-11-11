@@ -105,277 +105,11 @@ function calculateDistanceKm(a: GeoPoint, b: GeoPoint): number {
   return Math.max(0.4, Number(roadDistance.toFixed(1)));
 }
 
-const SEED_ORDERS: ActiveOrder[] = [
-  {
-    id: "ORD-2026-081",
-    proposalCode: "PROP-8418",
-    restaurantId: "rest-raices",
-    restaurantName: "McDonald's",
-    restaurantAddress: "Av. Juárez 2318, La Paz, Puebla, Pue.",
-    restaurantLocation: RESTAURANT_LOCATIONS["rest-raices"],
-    customerId: "usr_demo_standard_01",
-    customerName: "Sofía Méndez",
-    customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 222 123 4567",
-    customerAddress: "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "sofia.mendez@coconea.local",
-      "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
-    ),
-    dishId: "dish-r1",
-    dishName: "Big Mac",
-    dishPrice: 99,
-    beverageId: "bev-r3",
-    beverageName: "Café americano",
-    beveragePrice: 35,
-    compostableCutlery: true,
-    allergens: ["Sin Maní", "Sin Nueces"],
-    dietaryNotes: ["Plan Equilibrado"],
-    caloriesText: "550 kcal • 28g Prot",
-    subtotal: 134,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 169,
-    courierEarnings: 44,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 1.1,
-    estimatedWindow: "13:30 - 14:15 hrs",
-    kitchenStage: "POR_HACER",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_0",
-        orderId: "ORD-2026-081",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pedido confirmado por Sofía Méndez en Col. La Paz, Puebla. Recibido en McDonald's Av. Juárez.",
-        timestamp: "12:38",
-      },
-    ],
-    createdAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-082",
-    proposalCode: "PROP-8419",
-    restaurantId: "rest-botanica",
-    restaurantName: "Subway",
-    restaurantAddress: "Av. Reforma 518, Centro Histórico, Puebla, Pue.",
-    restaurantLocation: RESTAURANT_LOCATIONS["rest-botanica"],
-    customerId: "usr_demo_keto_02",
-    customerName: "Carlos Gómez",
-    customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 222 812 9901",
-    customerAddress: "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "carlos.gomez@coconea.local",
-      "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
-    ),
-    dishId: "dish-b1",
-    dishName: "Pollo Estilo Teriyaki",
-    dishPrice: 119,
-    beverageId: null,
-    beverageName: null,
-    beveragePrice: 0,
-    compostableCutlery: true,
-    allergens: ["Sin Lácteos"],
-    dietaryNotes: ["Alto en Proteína", "Sin Azúcares Añadidos"],
-    caloriesText: "490 kcal • 36g Prot",
-    subtotal: 119,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 154,
-    courierEarnings: 46,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 0.9,
-    estimatedWindow: "13:30 - 14:15 hrs",
-    kitchenStage: "EN_ESPERA_REPARTIDOR",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_1",
-        orderId: "ORD-2026-082",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pedido listo en mostrador para recolección en Centro Histórico de Puebla.",
-        timestamp: "12:40",
-      },
-    ],
-    createdAt: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-083",
-    proposalCode: "PROP-8420",
-    restaurantId: "rest-greengrass",
-    restaurantName: "Green Grass",
-    restaurantAddress: "Blvd. del Niño Poblano 2510, Angelópolis, Puebla, Pue.",
-    restaurantLocation: RESTAURANT_LOCATIONS["rest-greengrass"],
-    customerId: "usr_demo_vegan_03",
-    customerName: "Valeria Ríos",
-    customerEmail: "valeria.rios@coconea.local",
-    customerPhone: "+52 222 674 2230",
-    customerAddress: "Vía Atlixcáyotl 3248, Angelópolis, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "valeria.rios@coconea.local",
-      "Vía Atlixcáyotl 3248, Angelópolis, Puebla, Pue.",
-    ),
-    dishId: "dish-g1",
-    dishName: "Cesar & Bacon",
-    dishPrice: 159,
-    beverageId: null,
-    beverageName: null,
-    beveragePrice: 0,
-    compostableCutlery: true,
-    allergens: ["Sin Nueces"],
-    dietaryNotes: ["Fresca", "Orgánico"],
-    caloriesText: "520 kcal • 24g Prot",
-    subtotal: 159,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 194,
-    courierEarnings: 52,
-    paymentMethod: "Efectivo",
-    deliveryPin: "4821",
-    distanceKm: 1.2,
-    estimatedWindow: "13:45 - 14:20 hrs",
-    kitchenStage: "EN_PREPARACION",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_2",
-        orderId: "ORD-2026-083",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Cocina preparando orden en sucursal Angelópolis, Puebla.",
-        timestamp: "12:45",
-      },
-    ],
-    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-084",
-    proposalCode: "PROP-8422",
-    restaurantId: "rest-pacifico",
-    restaurantName: "KFC",
-    restaurantAddress: "Blvd. Héroes del 5 de Mayo 704, El Carmen, Puebla, Pue.",
-    restaurantLocation: RESTAURANT_LOCATIONS["rest-pacifico"],
-    customerId: "usr_demo_standard_01",
-    customerName: "Sofía Méndez",
-    customerEmail: "sofia.mendez@coconea.local",
-    customerPhone: "+52 222 123 4567",
-    customerAddress: "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "sofia.mendez@coconea.local",
-      "Calle Teziutlán Sur 48, Col. La Paz, Puebla, Pue.",
-    ),
-    dishId: "dish-p2",
-    dishName: "Megabox Big Krunch",
-    dishPrice: 199,
-    beverageId: "bev-p1",
-    beverageName: "Refresco de lata",
-    beveragePrice: 35,
-    compostableCutlery: true,
-    allergens: ["Sin Maní"],
-    dietaryNotes: ["Alto en Proteína"],
-    caloriesText: "640 kcal • 38g Prot",
-    subtotal: 234,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 269,
-    courierEarnings: 49,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 3.4,
-    estimatedWindow: "13:40 - 14:20 hrs",
-    kitchenStage: "POR_HACER",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_3",
-        orderId: "ORD-2026-084",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pedido confirmado y enviado a cocina KFC Blvd. 5 de Mayo, Puebla.",
-        timestamp: "12:48",
-      },
-    ],
-    createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 1 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-  {
-    id: "ORD-2026-085",
-    proposalCode: "PROP-8423",
-    restaurantId: "rest-dominos",
-    restaurantName: "Domino's",
-    restaurantAddress: "Av. 43 Poniente 302, Huexotitla, Puebla, Pue.",
-    restaurantLocation: RESTAURANT_LOCATIONS["rest-dominos"],
-    customerId: "usr_demo_keto_02",
-    customerName: "Carlos Gómez",
-    customerEmail: "carlos.gomez@coconea.local",
-    customerPhone: "+52 222 812 9901",
-    customerAddress: "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
-    customerLocation: resolveCustomerLocation(
-      "carlos.gomez@coconea.local",
-      "Calle 3 Sur 304, Centro Histórico, Puebla, Pue.",
-    ),
-    dishId: "dish-d1",
-    dishName: "Pizza de pepperoni",
-    dishPrice: 199,
-    beverageId: null,
-    beverageName: null,
-    beveragePrice: 0,
-    compostableCutlery: false,
-    allergens: ["Sin Nueces"],
-    dietaryNotes: ["Horneado tradicional"],
-    caloriesText: "590 kcal • 26g Prot",
-    subtotal: 199,
-    deliveryFee: 20,
-    serviceFee: 15,
-    total: 234,
-    courierEarnings: 48,
-    paymentMethod: "Tarjeta",
-    deliveryPin: "4821",
-    distanceKm: 1.7,
-    estimatedWindow: "13:45 - 14:30 hrs",
-    kitchenStage: "EN_PREPARACION",
-    courierStep: "SIN_ASIGNAR",
-    courier: null,
-    rejectedByCourierIds: [],
-    messages: [
-      {
-        id: "msg_init_4",
-        orderId: "ORD-2026-085",
-        senderRole: "SYSTEM",
-        senderName: "Sistema Coconea",
-        text: "Pizza en horno en sucursal Domino's Huexotitla, Puebla.",
-        timestamp: "12:50",
-      },
-    ],
-    createdAt: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
-    updatedAt: new Date(Date.now() - 2 * 60 * 1000).toISOString(),
-    deliveredAt: null,
-  },
-];
+const SEED_ORDERS: ActiveOrder[] = [];
 
 @Injectable()
 export class OrdersService {
-  private readonly storePath = resolve(process.cwd(), "../../tmp/active-orders-puebla.json");
+  private readonly storePath = resolve(process.cwd(), "../../tmp/live-orders-puebla.json");
   private ordersCache: ActiveOrder[] | null = null;
 
   private loadOrders(): ActiveOrder[] {
@@ -384,13 +118,13 @@ export class OrdersService {
       if (existsSync(this.storePath)) {
         const raw = readFileSync(this.storePath, "utf8");
         const parsed = JSON.parse(raw) as ActiveOrder[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           this.ordersCache = parsed;
           return parsed;
         }
       }
     } catch {
-      // Fallback to seed orders
+      // Fallback to empty array
     }
     this.ordersCache = structuredClone(SEED_ORDERS);
     this.persistOrders(this.ordersCache);
@@ -658,10 +392,16 @@ export class OrdersService {
       hour: "2-digit",
       minute: "2-digit",
     });
+    const previousStep = target.courierStep;
     target.courierStep = courierStep;
     target.updatedAt = now.toISOString();
 
-    if (courierStep === "ESPERANDO_PEDIDO" && target.courier) {
+    if (courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" && target.courier && options?.courierLocation) {
+      target.courier = {
+        ...target.courier,
+        currentLocation: options.courierLocation,
+      };
+    } else if (courierStep === "ESPERANDO_PEDIDO" && target.courier) {
       target.courier = {
         ...target.courier,
         currentLocation: options?.courierLocation || target.restaurantLocation,
@@ -682,7 +422,7 @@ export class OrdersService {
               (target.restaurantLocation.lat + target.customerLocation.lat) / 2,
             lng:
               (target.restaurantLocation.lng + target.customerLocation.lng) / 2,
-            label: "En trayecto hacia domicilio",
+            label: "En trayecto hacia domicilio en Puebla",
           },
         };
       }
@@ -708,23 +448,25 @@ export class OrdersService {
     const stepNotice: Record<CourierTrackingStep, string> = {
       SIN_ASIGNAR: "Sin repartidor asignado.",
       ACEPTADO_EN_RUTA_RESTAURANTE: "En camino al restaurante para recoger.",
-      ESPERANDO_PEDIDO: `Llegué a ${target.restaurantName} y estoy esperando a que me entreguen tu paquete.`,
-      EN_ENTREGA: `¡Ya tengo tu pedido de ${target.restaurantName}! Voy en camino hacia ${target.customerAddress}.`,
+      ESPERANDO_PEDIDO: `Llegué a ${target.restaurantName} (${target.restaurantAddress}) y estoy esperando a que me entreguen tu paquete.`,
+      EN_ENTREGA: `¡Ya recibí tu pedido en ${target.restaurantName}! Voy en camino hacia tu domicilio en ${target.customerAddress}.`,
       EN_DOMICILIO: `Ya llegué a tu domicilio (${target.customerAddress}). Ten listo tu PIN de entrega.`,
       ENTREGADO: `Pedido entregado satisfactoriamente. ¡Buen provecho!`,
     };
 
-    target.messages = [
-      ...target.messages,
-      {
-        id: `msg_${Date.now()}`,
-        orderId,
-        senderRole: "DELIVERY",
-        senderName: target.courier?.name || "Repartidor",
-        text: stepNotice[courierStep],
-        timestamp: timeLabel,
-      },
-    ];
+    if (previousStep !== courierStep) {
+      target.messages = [
+        ...target.messages,
+        {
+          id: `msg_${Date.now()}`,
+          orderId,
+          senderRole: "DELIVERY",
+          senderName: target.courier?.name || "Repartidor",
+          text: stepNotice[courierStep],
+          timestamp: timeLabel,
+        },
+      ];
+    }
 
     orders[idx] = target;
     this.persistOrders(orders);
