@@ -266,40 +266,32 @@ export class OrdersService {
       updatedAt: now.toISOString(),
     };
     if (kitchenStage === "EN_DELIVERY") {
-      if (!updated.courier) {
-        updated.courier = {
-          id: "usr_del_mateo_01",
-          name: "Mateo Silva",
-          phone: "+52 55 4491 8820",
-          vehicle: "Motocicleta Italika 150cc",
-          plates: "MTX-42A",
-          rating: 4.9,
-          currentLocation: updated.restaurantLocation,
-        };
-      }
       if (
-        updated.courierStep === "SIN_ASIGNAR" ||
-        updated.courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" ||
-        updated.courierStep === "ESPERANDO_PEDIDO"
+        updated.courier &&
+        (updated.courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" ||
+          updated.courierStep === "ESPERANDO_PEDIDO")
       ) {
         updated.courierStep = "EN_ENTREGA";
       }
     }
     if (kitchenStage === "ENTREGADO") {
-      if (!updated.courier) {
+      if (updated.courier) {
         updated.courier = {
-          id: "usr_del_mateo_01",
-          name: "Mateo Silva",
-          phone: "+52 55 4491 8820",
-          vehicle: "Motocicleta Italika 150cc",
-          plates: "MTX-42A",
-          rating: 4.9,
+          ...updated.courier,
           currentLocation: updated.customerLocation,
         };
       }
       updated.courierStep = "ENTREGADO";
       updated.deliveredAt = now.toISOString();
     }
+    const kitchenNotices: Record<KitchenOrderStage, string> = {
+      POR_HACER: `Pedido recibido en ${updated.restaurantName}. Pendiente de aceptar en cocina.`,
+      EN_PREPARACION: `¡${updated.restaurantName} aceptó tu pedido y ya lo está preparando en cocina!`,
+      EN_ESPERA_REPARTIDOR: `¡Tu pedido ya está listo y empacado en mostrador de ${updated.restaurantName} (${updated.restaurantAddress}) esperando recolección del repartidor!`,
+      EN_DELIVERY: `Paquete entregado en mostrador al repartidor ${updated.courier?.name || "asignado"} para iniciar ruta a tu domicilio.`,
+      ENTREGADO: `Pedido marcado como entregado.`,
+      CANCELADO: `El pedido fue cancelado por el restaurante.`,
+    };
     updated.messages = [
       ...updated.messages,
       {
@@ -307,7 +299,7 @@ export class OrdersService {
         orderId,
         senderRole: "RESTAURANT",
         senderName: updated.restaurantName,
-        text: `Estado en cocina actualizado a: ${KITCHEN_STAGE_LABELS[kitchenStage]}.`,
+        text: kitchenNotices[kitchenStage],
         timestamp: timeLabel,
       },
     ];

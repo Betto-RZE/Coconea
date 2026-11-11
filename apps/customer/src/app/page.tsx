@@ -337,6 +337,10 @@ export default function CustomerHome() {
               lastOrderSigRef.current = sig;
               setActiveOrder(updated);
             }
+          } else if (orders.length === 0) {
+            lastOrderSigRef.current = "";
+            setActiveOrder(null);
+            setProposalStatus("pending");
           }
         } else if (user) {
           const myLatest = orders.find(
@@ -1506,13 +1510,26 @@ export default function CustomerHome() {
                   <>
                     {/* Barra de progreso en vivo de las 5 etapas */}
                     <div className="rounded-2xl bg-white border border-cream-border p-3 space-y-2.5 text-xs text-espresso">
-                      <div className="flex items-center justify-between">
+                       <div className="flex items-center justify-between">
                         <span className="text-coffee-muted font-bold text-[11px]">
-                          Etapa en Restaurante:
+                          Etapa en Restaurante ({activeOrder.restaurantName}):
                         </span>
                         <span className="rounded-full bg-cream-container border border-cream-border px-2.5 py-0.5 font-extrabold text-espresso text-[11px]">
                           {KITCHEN_STAGE_LABELS[activeOrder.kitchenStage]}
                         </span>
+                      </div>
+
+                      <div className="rounded-xl bg-cream-soft border border-cream-border px-2.5 py-2 text-[11px] text-espresso font-semibold">
+                        {activeOrder.kitchenStage === "POR_HACER" &&
+                          `⏳ Tu pedido llegó a ${activeOrder.restaurantName} (${activeOrder.restaurantAddress}). Esperando que la cocina acepte e inicie preparación.`}
+                        {activeOrder.kitchenStage === "EN_PREPARACION" &&
+                          `🔥 ¡${activeOrder.restaurantName} aceptó tu pedido y lo está preparando en este momento!`}
+                        {activeOrder.kitchenStage === "EN_ESPERA_REPARTIDOR" &&
+                          `📦 ¡Tu comida ya está lista y empacada en ${activeOrder.restaurantName}! Esperando recolección del repartidor.`}
+                        {activeOrder.kitchenStage === "EN_DELIVERY" &&
+                          `🛵 ¡El repartidor ya recogió tu pedido en ${activeOrder.restaurantName} y va en camino hacia tu domicilio en Puebla!`}
+                        {activeOrder.kitchenStage === "ENTREGADO" &&
+                          `✅ ¡Tu pedido fue entregado satisfactoriamente en ${activeOrder.customerAddress}!`}
                       </div>
 
                       <div className="grid grid-cols-5 gap-1 pt-0.5">

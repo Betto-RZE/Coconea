@@ -686,30 +686,32 @@ export async function updateOrderKitchenStage(
     updatedAt: now.toISOString(),
   };
   if (kitchenStage === "EN_DELIVERY") {
-    if (!target.courier) {
-      target.courier = {
-        ...DEFAULT_COURIER_PROFILE,
-        currentLocation: existing.restaurantLocation,
-      };
-    }
     if (
-      target.courierStep === "SIN_ASIGNAR" ||
-      target.courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" ||
-      target.courierStep === "ESPERANDO_PEDIDO"
+      target.courier &&
+      (target.courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" ||
+        target.courierStep === "ESPERANDO_PEDIDO")
     ) {
       target.courierStep = "EN_ENTREGA";
     }
   }
   if (kitchenStage === "ENTREGADO") {
-    if (!target.courier) {
+    if (target.courier) {
       target.courier = {
-        ...DEFAULT_COURIER_PROFILE,
+        ...target.courier,
         currentLocation: existing.customerLocation,
       };
     }
     target.courierStep = "ENTREGADO";
     target.deliveredAt = now.toISOString();
   }
+  const kitchenNotices: Record<KitchenOrderStage, string> = {
+    POR_HACER: `Pedido recibido en ${existing.restaurantName}. Pendiente de aceptar en cocina.`,
+    EN_PREPARACION: `¡${existing.restaurantName} aceptó tu pedido y ya lo está preparando en cocina!`,
+    EN_ESPERA_REPARTIDOR: `¡Tu pedido ya está listo y empacado en mostrador de ${existing.restaurantName} (${existing.restaurantAddress}) esperando recolección del repartidor!`,
+    EN_DELIVERY: `Paquete entregado en mostrador al repartidor ${target.courier?.name || "asignado"} para iniciar ruta a tu domicilio.`,
+    ENTREGADO: `Pedido marcado como entregado.`,
+    CANCELADO: `El pedido fue cancelado por el restaurante.`,
+  };
   target.messages = [
     ...existing.messages,
     {
@@ -717,7 +719,7 @@ export async function updateOrderKitchenStage(
       orderId,
       senderRole: "RESTAURANT",
       senderName: existing.restaurantName,
-      text: `Estado en cocina actualizado a: ${KITCHEN_STAGE_LABELS[kitchenStage]}.`,
+      text: kitchenNotices[kitchenStage],
       timestamp: timeLabel,
     },
   ];

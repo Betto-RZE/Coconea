@@ -1328,17 +1328,17 @@ function OrderKdsCard({
         </div>
       </div>
 
-      {/* Botón de avance de etapa */}
+      {/* Botón de avance de etapa en flujo real */}
       <div className="pt-2 border-t border-cream-border">
         {order.kitchenStage === "POR_HACER" && (
           <div className="flex gap-1.5">
             <button
               type="button"
               onClick={() => void onAdvanceStage(order, "EN_PREPARACION")}
-              className="flex-1 rounded-full bg-espresso py-2 px-3 text-xs font-bold text-white hover:bg-espresso-light transition flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex-1 rounded-full bg-espresso py-2.5 px-3 text-xs font-bold text-white hover:bg-espresso-light transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
             >
               <Flame className="h-3.5 w-3.5 text-caramel" />
-              <span>Iniciar Preparación</span>
+              <span>Aceptar e Iniciar Preparación</span>
             </button>
             <button
               type="button"
@@ -1355,39 +1355,44 @@ function OrderKdsCard({
           <button
             type="button"
             onClick={() => void onAdvanceStage(order, "EN_ESPERA_REPARTIDOR")}
-            className="w-full rounded-full bg-espresso py-2 px-3 text-xs font-bold text-white hover:bg-espresso-light transition flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full rounded-full bg-espresso py-2.5 px-3 text-xs font-bold text-white hover:bg-espresso-light transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
           >
             <PackageCheck className="h-3.5 w-3.5 text-caramel" />
-            <span>Pasar a Espera de Recibir</span>
+            <span>Terminar Preparación · Listo para Repartidor</span>
           </button>
         )}
 
         {order.kitchenStage === "EN_ESPERA_REPARTIDOR" && (
-          <button
-            type="button"
-            onClick={() => void onAdvanceStage(order, "EN_DELIVERY")}
-            className="w-full rounded-full bg-caramel py-2 px-3 text-xs font-bold text-white hover:opacity-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Bike className="h-3.5 w-3.5" />
-            <span>Entregar a Repartidor (En Delivery)</span>
-          </button>
+          <div className="space-y-1.5">
+            {order.courier ? (
+              <button
+                type="button"
+                onClick={() => void onAdvanceStage(order, "EN_DELIVERY")}
+                className="w-full rounded-full bg-caramel py-2.5 px-3 text-xs font-bold text-white hover:opacity-95 transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <Bike className="h-3.5 w-3.5" />
+                <span>
+                  Entregar Paquete a {order.courier.name.split(" ")[0]} (En Delivery)
+                </span>
+              </button>
+            ) : (
+              <div className="rounded-xl bg-amber-50 border border-amber-200 p-2 text-center text-[11px] font-bold text-amber-900">
+                Listo en mostrador • Esperando que un repartidor acepte el pedido en la App de Repartidor
+              </div>
+            )}
+          </div>
         )}
 
         {order.kitchenStage === "EN_DELIVERY" && (
-          <button
-            type="button"
-            onClick={() => void onAdvanceStage(order, "ENTREGADO")}
-            className="w-full rounded-full border border-emerald-300 bg-emerald-50 py-2 px-3 text-xs font-bold text-emerald-900 hover:bg-emerald-100 transition flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" />
-            <span>Marcar como Entregado</span>
-          </button>
+          <div className="rounded-xl bg-cream-container/70 border border-cream-border p-2 text-center text-[11px] font-bold text-espresso">
+            En ruta con {order.courier?.name || "el repartidor"} hacia el domicilio del cliente
+          </div>
         )}
 
         {order.kitchenStage === "ENTREGADO" && (
           <div className="rounded-full bg-emerald-50 border border-emerald-200 py-1.5 px-3 text-center text-[11px] font-extrabold text-emerald-800 flex items-center justify-center gap-1">
             <Check className="h-3.5 w-3.5 text-emerald-700" />
-            <span>Pedido Entregado</span>
+            <span>Pedido Entregado al Cliente</span>
           </div>
         )}
       </div>
