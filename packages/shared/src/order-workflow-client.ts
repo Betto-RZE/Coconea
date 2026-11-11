@@ -495,7 +495,28 @@ export async function updateOrderKitchenStage(
     kitchenStage,
     updatedAt: now.toISOString(),
   };
+  if (kitchenStage === "EN_DELIVERY") {
+    if (!target.courier) {
+      target.courier = {
+        ...DEFAULT_COURIER_PROFILE,
+        currentLocation: existing.restaurantLocation,
+      };
+    }
+    if (
+      target.courierStep === "SIN_ASIGNAR" ||
+      target.courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" ||
+      target.courierStep === "ESPERANDO_PEDIDO"
+    ) {
+      target.courierStep = "EN_ENTREGA";
+    }
+  }
   if (kitchenStage === "ENTREGADO") {
+    if (!target.courier) {
+      target.courier = {
+        ...DEFAULT_COURIER_PROFILE,
+        currentLocation: existing.customerLocation,
+      };
+    }
     target.courierStep = "ENTREGADO";
     target.deliveredAt = now.toISOString();
   }

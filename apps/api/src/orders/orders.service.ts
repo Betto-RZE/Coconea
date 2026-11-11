@@ -359,7 +359,38 @@ export class OrdersService {
       kitchenStage,
       updatedAt: now.toISOString(),
     };
+    if (kitchenStage === "EN_DELIVERY") {
+      if (!updated.courier) {
+        updated.courier = {
+          id: "usr_del_mateo_01",
+          name: "Mateo Silva",
+          phone: "+52 55 4491 8820",
+          vehicle: "Motocicleta Italika 150cc",
+          plates: "MTX-42A",
+          rating: 4.9,
+          currentLocation: updated.restaurantLocation,
+        };
+      }
+      if (
+        updated.courierStep === "SIN_ASIGNAR" ||
+        updated.courierStep === "ACEPTADO_EN_RUTA_RESTAURANTE" ||
+        updated.courierStep === "ESPERANDO_PEDIDO"
+      ) {
+        updated.courierStep = "EN_ENTREGA";
+      }
+    }
     if (kitchenStage === "ENTREGADO") {
+      if (!updated.courier) {
+        updated.courier = {
+          id: "usr_del_mateo_01",
+          name: "Mateo Silva",
+          phone: "+52 55 4491 8820",
+          vehicle: "Motocicleta Italika 150cc",
+          plates: "MTX-42A",
+          rating: 4.9,
+          currentLocation: updated.customerLocation,
+        };
+      }
       updated.courierStep = "ENTREGADO";
       updated.deliveredAt = now.toISOString();
     }
@@ -566,3 +597,4 @@ export class OrdersService {
     return updated;
   }
 }
+
