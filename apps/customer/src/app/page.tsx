@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   PROJECT_NAME,
@@ -11,6 +12,7 @@ import {
   createActiveOrder,
   fetchActiveOrders,
   sendOrderChatMessage,
+  getOrdersSignature,
   KITCHEN_STAGE_LABELS,
   COURIER_STEP_LABELS,
   RESTAURANT_LOCATIONS,
@@ -50,11 +52,22 @@ import {
   MessageSquare,
   Send,
 } from "lucide-react";
-import CustomerDashboard from "@/app/components/CustomerDashboard";
-import DietPreferencesSettings from "@/app/components/DietPreferencesSettings";
 import { Navbar, CustomerTab } from "@/components/navbar";
-import { PueblaAddressMap } from "@/components/puebla-address-map";
 import { useAuth, DEMO_ACCOUNTS } from "@/context/auth-context";
+
+const CustomerDashboard = dynamic(
+  () => import("@/app/components/CustomerDashboard"),
+  { ssr: false },
+);
+const DietPreferencesSettings = dynamic(
+  () => import("@/app/components/DietPreferencesSettings"),
+  { ssr: false },
+);
+const PueblaAddressMap = dynamic(
+  () =>
+    import("@/components/puebla-address-map").then((m) => m.PueblaAddressMap),
+  { ssr: false },
+);
 
 // =============================================================================
 // MODELOS DE DATOS: RESTAURANTES ALIADOS Y SUS RESPECTIVOS MENÚS
@@ -298,16 +311,33 @@ export default function CustomerHome() {
   const proposalTotal =
     dishPrice + beveragePrice + deliveryFee + ethicalServiceFee;
 
-  // Sincronización en vivo del pedido activo del cliente con Restaurante y Repartidor
+  // Sincronización en vivo del pedido activo del cliente (optimizada en RAM y pausada en pestañas ocultas)
+  const lastOrderSigRef = useRef<string>("");
   useEffect(() => {
     let disposed = false;
+    let inFlight = false;
     const syncOrder = async () => {
+      if (
+        disposed ||
+        inFlight ||
+        (typeof document !== "undefined" &&
+          document.visibilityState === "hidden")
+      ) {
+        return;
+      }
+      inFlight = true;
       try {
         const orders = await fetchActiveOrders(API_URL);
         if (disposed) return;
         if (activeOrder) {
           const updated = orders.find((o) => o.id === activeOrder.id);
-          if (updated) setActiveOrder(updated);
+          if (updated) {
+            const sig = getOrdersSignature([updated]);
+            if (sig !== lastOrderSigRef.current) {
+              lastOrderSigRef.current = sig;
+              setActiveOrder(updated);
+            }
+          }
         } else if (user) {
           const myLatest = orders.find(
             (o) =>
@@ -315,21 +345,32 @@ export default function CustomerHome() {
               o.kitchenStage !== "CANCELADO",
           );
           if (myLatest) {
-            setActiveOrder(myLatest);
-            setProposalStatus("confirmed");
+            const sig = getOrdersSignature([myLatest]);
+            if (sig !== lastOrderSigRef.current) {
+              lastOrderSigRef.current = sig;
+              setActiveOrder(myLatest);
+              setProposalStatus("confirmed");
+            }
           }
         }
       } catch {
         // Ignore transient sync errors
+      } finally {
+        inFlight = false;
       }
     };
     void syncOrder();
-    const timer = window.setInterval(syncOrder, 2500);
+    const timer = window.setInterval(syncOrder, 4000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void syncOrder();
+    };
     window.addEventListener("focus", syncOrder);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       disposed = true;
       window.clearInterval(timer);
       window.removeEventListener("focus", syncOrder);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [activeOrder?.id, user?.email]);
 

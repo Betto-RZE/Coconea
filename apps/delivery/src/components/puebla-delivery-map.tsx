@@ -114,6 +114,7 @@ export function PueblaDeliveryMap({
   const markersLayerRef = useRef<LeafletMarkerInstance[]>([]);
   const activeRoutePolylineRef = useRef<LeafletPolylineInstance | null>(null);
   const previewPolylineRef = useRef<LeafletPolylineInstance | null>(null);
+  const lastFittedKeyRef = useRef<string>("");
 
   const [leafletReady, setLeafletReady] = useState(false);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
@@ -121,6 +122,25 @@ export function PueblaDeliveryMap({
     distanceKm: number;
     durationMinutes: number;
   } | null>(null);
+
+  const mapStateSignature = [
+    courierLocation.lat.toFixed(4),
+    courierLocation.lng.toFixed(4),
+    courierName,
+    previewOrder?.id || "none",
+    availableOrders
+      .map(
+        (o) =>
+          `${o.id}:${o.kitchenStage}:${o.customerLocation.lat.toFixed(4)},${o.customerLocation.lng.toFixed(4)}`,
+      )
+      .join(","),
+    activeRouteOrders
+      .map(
+        (o) =>
+          `${o.id}:${o.courierStep}:${o.customerLocation.lat.toFixed(4)},${o.customerLocation.lng.toFixed(4)}`,
+      )
+      .join(","),
+  ].join("|");
 
   useEffect(() => {
     let disposed = false;
@@ -315,7 +335,9 @@ export function PueblaDeliveryMap({
       );
     });
 
-    if (boundsPoints.length > 1) {
+    const fitKey = `${previewOrder?.id || "none"}|${activeRouteOrders.map((o) => o.id).join(",")}|${availableOrders.length}`;
+    if (boundsPoints.length > 1 && lastFittedKeyRef.current !== fitKey) {
+      lastFittedKeyRef.current = fitKey;
       map.fitBounds(boundsPoints, { padding: [32, 32], maxZoom: 15 });
     }
 
@@ -398,14 +420,7 @@ export function PueblaDeliveryMap({
     return () => {
       cancelled = true;
     };
-  }, [
-    leafletReady,
-    courierLocation,
-    courierName,
-    availableOrders,
-    activeRouteOrders,
-    previewOrder,
-  ]);
+  }, [leafletReady, mapStateSignature]);
 
   return (
     <div className="space-y-2">

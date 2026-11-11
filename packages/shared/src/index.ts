@@ -107,6 +107,7 @@ export {
   geocodePueblaAddress,
   reverseGeocodePuebla,
   fetchRealOsrmRoute,
+  getOrdersSignature,
   RESTAURANT_LOCATIONS,
   DEFAULT_COURIER_LOCATION,
   DEFAULT_COURIER_PROFILE,

@@ -5,10 +5,22 @@ const nextConfig = {
   // Keep production builds from overwriting the running development server.
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   transpilePackages: ["@coconea/shared", "@coconea/types", "@coconea/validation"],
+  onDemandEntries: {
+    maxInactiveAge: 15 * 1000,
+    pagesBufferLength: 1,
+  },
   experimental: {
     webpackMemoryOptimizations: true,
-    optimizePackageImports: ["lucide-react"],
-    cpus: 2,
+    preloadEntriesOnStart: false,
+    optimizePackageImports: ["lucide-react", "@coconea/shared"],
+    cpus: 1,
+    workerThreads: false,
+  },
+  webpack: (config, { dev }) => {
+    if (dev) {
+      config.cache = false;
+    }
+    return config;
   },
 };
 

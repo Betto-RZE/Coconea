@@ -219,6 +219,23 @@ export async function geocodePueblaAddress(
   }));
 }
 
+const reverseGeocodeCache = new Map<string, string>();
+const osrmRouteCache = new Map<string, OsrmRouteResult>();
+
+/**
+ * Genera una huella ligera de la lista de pedidos para evitar re-renderizados
+ * innecesarios en React durante el polling cuando no hubo cambios.
+ */
+export function getOrdersSignature(orders: ActiveOrder[]): string {
+  if (!orders.length) return "empty";
+  return orders
+    .map(
+      (o) =>
+        `${o.id}:${o.kitchenStage}:${o.courierStep}:${o.updatedAt}:${o.messages.length}:${o.rejectedByCourierIds.length}:${o.courier?.currentLocation.lat ?? 0},${o.courier?.currentLocation.lng ?? 0}`,
+    )
+    .join("|");
+}
+
 /**
  * Obtiene el nombre real de la calle y colonia en Puebla al soltar o tocar un Pin en el mapa (Nominatim Reverse).
  */
@@ -226,6 +243,10 @@ export async function reverseGeocodePuebla(
   lat: number,
   lng: number,
 ): Promise<string> {
+  const cacheKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+  const cached = reverseGeocodeCache.get(cacheKey);
+  if (cached) return cached;
+
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
     const res = await fetch(url, {
@@ -252,10 +273,16 @@ export async function reverseGeocodePuebla(
           data.address.suburb || data.address.neighbourhood
             ? `, Col. ${data.address.suburb || data.address.neighbourhood}`
             : "";
-        return `${data.address.road}${num}${col}, Puebla, Pue.`;
+        const resolved = `${data.address.road}${num}${col}, Puebla, Pue.`;
+        if (reverseGeocodeCache.size > 60) reverseGeocodeCache.clear();
+        reverseGeocodeCache.set(cacheKey, resolved);
+        return resolved;
       }
       if (data.display_name) {
-        return data.display_name.split(",").slice(0, 4).join(", ");
+        const resolved = data.display_name.split(",").slice(0, 4).join(", ");
+        if (reverseGeocodeCache.size > 60) reverseGeocodeCache.clear();
+        reverseGeocodeCache.set(cacheKey, resolved);
+        return resolved;
       }
     }
   } catch {
@@ -271,7 +298,8 @@ export interface OsrmRouteResult {
 }
 
 /**
- * Calcula la ruta real calle por calle en Puebla usando OSRM (Open Source Routing Machine, $0 MXN).
+ * Calcula la ruta real calle por calle en Puebla usando OSRM (Open Source Routing Machine, $0 MXN)
+ * con caché en memoria para no repetir peticiones ni saturar RAM.
  */
 export async function fetchRealOsrmRoute(
   waypoints: { lat: number; lng: number }[],
@@ -283,11 +311,14 @@ export async function fetchRealOsrmRoute(
       durationMin: 0,
     };
   }
+  const coordsString = waypoints
+    .map((w) => `${w.lng.toFixed(5)},${w.lat.toFixed(5)}`)
+    .join(";");
+  const cached = osrmRouteCache.get(coordsString);
+  if (cached) return cached;
+
   try {
-    const coordsString = waypoints
-      .map((w) => `${w.lng.toFixed(6)},${w.lat.toFixed(6)}`)
-      .join(";");
-    const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=full&geometries=geojson`;
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordsString}?overview=simplified&geometries=geojson`;
     const res = await fetch(url);
     if (res.ok) {
       const data = (await res.json()) as {
@@ -299,7 +330,7 @@ export async function fetchRealOsrmRoute(
       };
       const firstRoute = data.routes?.[0];
       if (firstRoute?.geometry?.coordinates?.length) {
-        return {
+        const result: OsrmRouteResult = {
           // GeoJSON usa [lng, lat], Leaflet usa [lat, lng]
           coordinates: firstRoute.geometry.coordinates.map(([lng, lat]) => [
             lat,
@@ -308,16 +339,21 @@ export async function fetchRealOsrmRoute(
           distanceKm: Number((firstRoute.distance / 1000).toFixed(1)),
           durationMin: Math.max(3, Math.round(firstRoute.duration / 60)),
         };
+        if (osrmRouteCache.size > 50) osrmRouteCache.clear();
+        osrmRouteCache.set(coordsString, result);
+        return result;
       }
     }
   } catch {
     // Fallback a línea directa entre puntos si no hay red
   }
-  return {
+  const fallback: OsrmRouteResult = {
     coordinates: waypoints.map((w) => [w.lat, w.lng]),
     distanceKm: 1.8,
     durationMin: 12,
   };
+  osrmRouteCache.set(coordsString, fallback);
+  return fallback;
 }
 
 /**

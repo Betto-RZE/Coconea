@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import dynamic from "next/dynamic";
 
 const RestaurantCatalogPanel = dynamic(
@@ -45,6 +45,7 @@ import {
   formatCurrencyMXN,
   fetchActiveOrders,
   updateOrderKitchenStage,
+  getOrdersSignature,
   KITCHEN_STAGE_LABELS,
   COURIER_STEP_LABELS,
   type DemoRestaurant,
@@ -209,22 +210,48 @@ export default function RestaurantPage() {
     }
   }, []);
 
-  const syncOrders = useCallback(async () => {
-    setIsSyncing(true);
+  const lastOrdersSigRef = useRef<string>("");
+  const syncInFlightRef = useRef<boolean>(false);
+
+  const syncOrders = useCallback(async (showSpinner = false) => {
+    if (syncInFlightRef.current) return;
+    if (
+      !showSpinner &&
+      typeof document !== "undefined" &&
+      document.visibilityState === "hidden"
+    ) {
+      return;
+    }
+    syncInFlightRef.current = true;
+    if (showSpinner) setIsSyncing(true);
     try {
       const list = await fetchActiveOrders(API_URL);
-      setOrders(list);
+      const sig = getOrdersSignature(list);
+      if (sig !== lastOrdersSigRef.current) {
+        lastOrdersSigRef.current = sig;
+        setOrders(list);
+      }
     } finally {
-      setIsSyncing(false);
+      syncInFlightRef.current = false;
+      if (showSpinner) setIsSyncing(false);
     }
   }, []);
 
   useEffect(() => {
-    void syncOrders();
+    void syncOrders(true);
     const interval = setInterval(() => {
-      void syncOrders();
-    }, 2500);
-    return () => clearInterval(interval);
+      void syncOrders(false);
+    }, 3500);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void syncOrders(false);
+    };
+    window.addEventListener("focus", onVisibility);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onVisibility);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [syncOrders]);
 
   const handleSelectAccountLogin = (account: RegisteredRestaurantAccount) => {

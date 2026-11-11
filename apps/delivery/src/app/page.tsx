@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import {
   Bike,
   Navigation,
@@ -36,6 +37,7 @@ import {
   updateCourierTrackingStep,
   sendOrderChatMessage,
   checkOrderRouteCompatibility,
+  getOrdersSignature,
   DEFAULT_COURIER_PROFILE,
   DEFAULT_COURIER_LOCATION,
   COURIER_STEP_LABELS,
@@ -47,7 +49,12 @@ import type {
   CourierTrackingStep,
   GeoPoint,
 } from "@coconea/types";
-import { PueblaDeliveryMap } from "@/components/puebla-delivery-map";
+
+const PueblaDeliveryMap = dynamic(
+  () =>
+    import("@/components/puebla-delivery-map").then((m) => m.PueblaDeliveryMap),
+  { ssr: false },
+);
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/v1";
 
@@ -130,22 +137,48 @@ export default function DeliveryDashboard() {
   // Mensaje de chat
   const [inputMessage, setInputMessage] = useState("");
 
-  const syncOrders = useCallback(async () => {
-    setIsSyncing(true);
+  const lastOrdersSigRef = useRef<string>("");
+  const syncInFlightRef = useRef<boolean>(false);
+
+  const syncOrders = useCallback(async (showSpinner = false) => {
+    if (syncInFlightRef.current) return;
+    if (
+      !showSpinner &&
+      typeof document !== "undefined" &&
+      document.visibilityState === "hidden"
+    ) {
+      return;
+    }
+    syncInFlightRef.current = true;
+    if (showSpinner) setIsSyncing(true);
     try {
       const list = await fetchActiveOrders(API_URL);
-      setOrders(list);
+      const sig = getOrdersSignature(list);
+      if (sig !== lastOrdersSigRef.current) {
+        lastOrdersSigRef.current = sig;
+        setOrders(list);
+      }
     } finally {
-      setIsSyncing(false);
+      syncInFlightRef.current = false;
+      if (showSpinner) setIsSyncing(false);
     }
   }, []);
 
   useEffect(() => {
-    void syncOrders();
+    void syncOrders(true);
     const interval = setInterval(() => {
-      void syncOrders();
-    }, 2500);
-    return () => clearInterval(interval);
+      void syncOrders(false);
+    }, 3500);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void syncOrders(false);
+    };
+    window.addEventListener("focus", onVisibility);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onVisibility);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [syncOrders]);
 
   // Pedidos ya aceptados por el repartidor y actualmente en curso (multi-pedido)
